@@ -1,0 +1,81 @@
+package main
+
+import (
+	"encoding/json"
+	"log"
+	"os"
+
+	"github.com/arthurshafikov/cryptobot-sdk-golang/cryptobot"
+	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+)
+
+type Config struct {
+	TelegramBotToken string `json:"TokenTGbot"`
+	CryptoBotToken   string `json:"TokenCryptobot"`
+}
+
+var (
+	bot                         *tgbotapi.BotAPI
+	cryptoClient                *cryptobot.Client
+)
+
+func loadConfig(filename string) (Config, error) {
+	var config Config
+	file, err := os.Open(filename)
+	if err != nil {
+		return config, err
+	}
+	defer file.Close()
+	decoder := json.NewDecoder(file)
+	err = decoder.Decode(&config)
+	return config, err
+}
+
+func main() {
+	config, err := loadConfig("config.json")
+	if err != nil {
+		log.Fatalf("Failed to load config: %v", err)
+	}
+
+	bot, err = tgbotapi.NewBotAPI(config.TelegramBotToken)
+	if err != nil {
+		log.Fatalf("Error creating bot: %v", err)
+	}
+
+	_, err = bot.Request(tgbotapi.DeleteWebhookConfig{})
+	if err != nil {
+		log.Fatalf("Error deleting webhook: %v", err)
+	}
+
+	cryptoClient = cryptobot.NewClient(cryptobot.Options{
+		Testing:  true,
+		APIToken: config.CryptoBotToken,
+	})
+
+	log.Printf("Authorized on account %s", bot.Self.UserName)
+
+	bot.Debug = true 
+	u := tgbotapi.NewUpdate(0)
+	u.Timeout = 60
+
+	updates := bot.GetUpdatesChan(u)
+
+	for update := range updates {
+		DBCheckExisting()
+		upM := update.Message;
+
+		if upM != nil {
+			switch upM.Text {
+			case "/start":
+				bot.Send(tgbotapi.NewMessage(upM.Chat.ID, "Hello over there!"))
+			} 
+		}
+		if update.CallbackQuery != nil {
+			upCQ := update.CallbackQuery;
+
+			switch upCQ.Data {
+			case "Menu":
+			}
+		}
+	}
+}
