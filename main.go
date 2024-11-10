@@ -67,7 +67,7 @@ func main() {
 		if upM != nil {
 			switch upM.Text {
 			case "/start":
-				bot.Send(tgbotapi.NewMessage(upM.Chat.ID, "Hello over there!"))
+				StartMenu(upM.Chat.ID, bot)
 			} 
 		}
 		if update.CallbackQuery != nil {

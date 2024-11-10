@@ -86,7 +86,7 @@ func DBCheckExisting() {
 	}
 }
 
-func startMenu(chatID int64, bot *tgbotapi.BotAPI){
+func StartMenu(chatID int64, bot *tgbotapi.BotAPI){
 	go ClearMessages(chatID, bot)
 	msg := tgbotapi.NewMessage(chatID, "hello muchahos")
 		keyboard := tgbotapi.NewInlineKeyboardMarkup(
