@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"os"
+	"strings"
 
 	"github.com/arthurshafikov/cryptobot-sdk-golang/cryptobot"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -61,7 +62,7 @@ func main() {
 	updates := bot.GetUpdatesChan(u)
 
 	for update := range updates {
-		DBCheckExisting()
+		//DBCheckExisting()
 		upM := update.Message;
 
 		if upM != nil {
@@ -72,9 +73,14 @@ func main() {
 		}
 		if update.CallbackQuery != nil {
 			upCQ := update.CallbackQuery;
-
+			if strings.HasPrefix(upCQ.Data, "topup"){
+				TopUp(bot, upCQ.Message.Chat.ID, cryptoClient, "TRX", strings.TrimPrefix(upCQ.Data, "topup"))
+			}
 			switch upCQ.Data {
 			case "Menu":
+				StartMenu(upCQ.Message.Chat.ID, bot)
+			case "Services":
+				ServiceMenu(upCQ.Message.Chat.ID, bot)
 			}
 		}
 	}

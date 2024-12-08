@@ -9,8 +9,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"database/sql"
-	_ "modernc.org/sqlite"
+	//"database/sql"
+	//_ "modernc.org/sqlite"
 
 	"github.com/arthurshafikov/cryptobot-sdk-golang/cryptobot"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -58,33 +58,33 @@ var (
 // 	return false;
 // }
 
-func DBCheckExisting() {
-	dbMutex.Lock()
-	defer dbMutex.Unlock()
+// func DBCheckExisting() {
+// 	dbMutex.Lock()
+// 	defer dbMutex.Unlock()
 
-	db, err := sql.Open("sqlite", dbpath)
-	if err != nil {
-		log.Println("Error open/create DB: ",err)
-	}
-	defer db.Close()
+// 	db, err := sql.Open("sqlite", dbpath)
+// 	if err != nil {
+// 		log.Println("Error open/create DB: ",err)
+// 	}
+// 	defer db.Close()
 
-	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS users (chatid INTEGER UNIQUE, name TEXT, language TEXT, balance INTEGER, date DATETIME)`)
-	if err != nil {
-		log.Println("Error sql request create users: ",err)
-	}
-	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS support (chatid INTEGER UNIQUE, name TEXT, date DATETIME)`)
-	if err != nil {
-		log.Println("Error sql request create support: ",err)
-	}
-	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS token (tokenid INTEGER PRIMARY KEY, userchatId INTEGER, supportchatID INTEGER, language TEXT, dateCreate DATETIME, dateCreateAccount, dateBuy DATETIME)`)
-	if err != nil {
-		log.Println("Error sql request create tokens: ",err)
-	}
-	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS tokenmessages (tokenid INTEGER, message STRING, date DATETIME)`)
-	if err != nil {
-		log.Println("Error sql request create tokenmessages: ",err)
-	}
-}
+// 	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS users (chatid INTEGER UNIQUE, name TEXT, language TEXT, balance INTEGER, date DATETIME)`)
+// 	if err != nil {
+// 		log.Println("Error sql request create users: ",err)
+// 	}
+// 	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS support (chatid INTEGER UNIQUE, name TEXT, date DATETIME)`)
+// 	if err != nil {
+// 		log.Println("Error sql request create support: ",err)
+// 	}
+// 	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS token (tokenid INTEGER PRIMARY KEY, userchatId INTEGER, supportchatID INTEGER, language TEXT, dateCreate DATETIME, dateCreateAccount, dateBuy DATETIME)`)
+// 	if err != nil {
+// 		log.Println("Error sql request create tokens: ",err)
+// 	}
+// 	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS tokenmessages (tokenid INTEGER, message STRING, date DATETIME)`)
+// 	if err != nil {
+// 		log.Println("Error sql request create tokenmessages: ",err)
+// 	}
+// }
 
 func StartMenu(chatID int64, bot *tgbotapi.BotAPI){
 	go ClearMessages(chatID, bot)
@@ -118,12 +118,12 @@ func ServiceMenu(chatID int64, bot *tgbotapi.BotAPI){
 	msg := tgbotapi.NewMessage(chatID, "Services")
 		keyboard := tgbotapi.NewInlineKeyboardMarkup(
 			tgbotapi.NewInlineKeyboardRow(
-				tgbotapi.NewInlineKeyboardButtonData("anal 1000", "topup1000"),
-				tgbotapi.NewInlineKeyboardButtonData("blow 500", "topup500"),
-				tgbotapi.NewInlineKeyboardButtonData("dance 200", "topup200"),
+				tgbotapi.NewInlineKeyboardButtonData("1000", "topup1000"),
+				tgbotapi.NewInlineKeyboardButtonData("500", "topup500"),
+				tgbotapi.NewInlineKeyboardButtonData("200", "topup200"),
 			),
 			tgbotapi.NewInlineKeyboardRow(
-				tgbotapi.NewInlineKeyboardButtonData("Back", "startmenu"),
+				tgbotapi.NewInlineKeyboardButtonData("Back", "Menu"),
 			),
 		)
 		msg.ReplyMarkup = keyboard
@@ -161,7 +161,7 @@ func TopUp(bot *tgbotapi.BotAPI, chatID int64, client *cryptobot.Client, asset s
 	msg := tgbotapi.NewMessage(chatID, fmt.Sprintf("Pay %s %s to address %s", invoice.Amount, invoice.Asset, invoice.PayUrl))
 	keyboard := tgbotapi.NewInlineKeyboardMarkup(
 		tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonData("Close payment", "closeInvoice"),
+			tgbotapi.NewInlineKeyboardButtonData("Close payment", "Menu"),
 		),
 	)
 	msg.ReplyMarkup = keyboard
@@ -187,7 +187,7 @@ func CheckPaymentStatus(bot *tgbotapi.BotAPI, chatID int64, client *cryptobot.Cl
 					msg := tgbotapi.NewMessage(chatID, "good")
 					keyboard := tgbotapi.NewInlineKeyboardMarkup(
 						tgbotapi.NewInlineKeyboardRow(
-							tgbotapi.NewInlineKeyboardButtonData("Menu", "startmenu"),
+							tgbotapi.NewInlineKeyboardButtonData("Menu", "Menu"),
 						),
 					)
 					msg.ReplyMarkup = keyboard
