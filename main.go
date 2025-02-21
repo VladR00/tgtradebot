@@ -11,13 +11,15 @@ import (
 )
 
 type Config struct {
-	TelegramBotToken string `json:"TokenTGbot"`
-	CryptoBotToken   string `json:"TokenCryptobot"`
+	TelegramBotToken string 	`json:"TokenTGbot"`
+	TelegramSupBotToken string 	`json:"TokenSupbot"`
+	CryptoBotToken   string 	`json:"TokenCryptobot"`
 }
 
 var (
 	bot                         *tgbotapi.BotAPI
 	cryptoClient                *cryptobot.Client
+	Supbot						*tgbotapi.BotAPI
 )
 
 func loadConfig(filename string) (Config, error) {
@@ -43,9 +45,9 @@ func main() {
 		log.Fatalf("Error creating bot: %v", err)
 	}
 
-	_, err = bot.Request(tgbotapi.DeleteWebhookConfig{})
+	Supbot, err = tgbotapi.NewBotAPI(config.TelegramSupBotToken)
 	if err != nil {
-		log.Fatalf("Error deleting webhook: %v", err)
+		log.Fatalf("Error creating bot: %v", err)
 	}
 
 	cryptoClient = cryptobot.NewClient(cryptobot.Options{
@@ -62,9 +64,8 @@ func main() {
 	updates := bot.GetUpdatesChan(u)
 
 	for update := range updates {
-		upM := update.Message;
-
-		if upM != nil {
+		if update.Message != nil {
+			upM := update.Message;
 			switch upM.Text {
 			case "/start":
 				StartMenu(upM.Chat.ID, bot)
