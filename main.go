@@ -62,7 +62,6 @@ func main() {
 	updates := bot.GetUpdatesChan(u)
 
 	for update := range updates {
-		//DBCheckExisting()
 		upM := update.Message;
 
 		if upM != nil {
@@ -81,6 +80,10 @@ func main() {
 				StartMenu(upCQ.Message.Chat.ID, bot)
 			case "Services":
 				ServiceMenu(upCQ.Message.Chat.ID, bot)
+			case "FAQ": 
+				FAQ(upCQ.Message.Chat.ID, bot)
+			case "нахуй":
+				NewMessage(upCQ.Message.Chat.ID, bot, "нахуй", true)
 			}
 		}
 	}
