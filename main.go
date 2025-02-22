@@ -45,10 +45,10 @@ func main() {
 		log.Fatalf("Error creating bot: %v", err)
 	}
 
-	Supbot, err = tgbotapi.NewBotAPI(config.TelegramSupBotToken)
-	if err != nil {
-		log.Fatalf("Error creating bot: %v", err)
-	}
+	// Supbot, err = tgbotapi.NewBotAPI(config.TelegramSupBotToken)
+	// if err != nil {
+	// 	log.Fatalf("Error creating bot: %v", err)
+	// }
 
 	cryptoClient = cryptobot.NewClient(cryptobot.Options{
 		Testing:  true,
@@ -56,36 +56,36 @@ func main() {
 	})
 
 	log.Printf("Authorized on account %s", bot.Self.UserName)
-	go supbotupdates()
+	//go supbotupdates()
 	bot.Debug = true 
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 60
 
 	updates := bot.GetUpdatesChan(u)
 
-	// for update := range updates {
-	// 	if update.Message != nil {
-	// 		upM := update.Message;
-	// 		switch upM.Text {
-	// 		case "/start":
-	// 			StartMenu(upM.Chat.ID, bot)
-	// 		} 
-	// 	}
-	// 	if update.CallbackQuery != nil {
-	// 		upCQ := update.CallbackQuery;
-	// 		if strings.HasPrefix(upCQ.Data, "topup"){
-	// 			TopUp(bot, upCQ.Message.Chat.ID, cryptoClient, "TRX", strings.TrimPrefix(upCQ.Data, "topup"))
-	// 		}
-	// 		switch upCQ.Data {
-	// 		case "Menu":
-	// 			StartMenu(upCQ.Message.Chat.ID, bot)
-	// 		case "Services":
-	// 			ServiceMenu(upCQ.Message.Chat.ID, bot)
-	// 		case "FAQ": 
-	// 			FAQ(upCQ.Message.Chat.ID, bot)
-	// 		case "нахуй":
-	// 			NewMessage(upCQ.Message.Chat.ID, bot, "нахуй", true)
-	// 		}
-	// 	}
-	// }
+	for update := range updates {
+		if update.Message != nil {
+			upM := update.Message;
+			switch upM.Text {
+			case "/start":
+				StartMenu(upM.Chat.ID, bot)
+			} 
+		}
+		if update.CallbackQuery != nil {
+			upCQ := update.CallbackQuery;
+			if strings.HasPrefix(upCQ.Data, "topup"){
+				TopUp(bot, upCQ.Message.Chat.ID, cryptoClient, "TRX", strings.TrimPrefix(upCQ.Data, "topup"))
+			}
+			switch upCQ.Data {
+			case "Menu":
+				StartMenu(upCQ.Message.Chat.ID, bot)
+			case "Services":
+				ServiceMenu(upCQ.Message.Chat.ID, bot)
+			case "FAQ": 
+				FAQ(upCQ.Message.Chat.ID, bot)
+			case "нахуй":
+				NewMessage(upCQ.Message.Chat.ID, bot, "нахуй", true)
+			}
+		}
+	}
 }
