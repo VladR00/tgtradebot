@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"strings"
+	"fmt"
 
 	"github.com/arthurshafikov/cryptobot-sdk-golang/cryptobot"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -45,6 +46,17 @@ func main() {
 		log.Fatalf("Error creating bot: %v", err)
 	}
 
+	db, err := OpenDB()
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	if err = CreateDB(db); err != nil {
+		fmt.Println(err)
+		return
+	}
+	db.Close()
 	// Supbot, err = tgbotapi.NewBotAPI(config.TelegramSupBotToken)
 	// if err != nil {
 	// 	log.Fatalf("Error creating bot: %v", err)
