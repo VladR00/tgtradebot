@@ -46,17 +46,11 @@ func main() {
 		log.Fatalf("Error creating bot: %v", err)
 	}
 
-	db, err := OpenDB()
-	if err != nil {
+	if err = CreateDB(); err != nil {
 		fmt.Println(err)
 		return
 	}
-
-	if err = CreateDB(db); err != nil {
-		fmt.Println(err)
-		return
-	}
-	db.Close()
+	
 	// Supbot, err = tgbotapi.NewBotAPI(config.TelegramSupBotToken)
 	// if err != nil {
 	// 	log.Fatalf("Error creating bot: %v", err)
@@ -80,6 +74,10 @@ func main() {
 			upM := update.Message;
 			switch upM.Text {
 			case "/start":
+				if err := InsertNewUsersDB(upM.Chat.ID, fmt.Sprintf("@%s",upM.Chat.UserName), upM.Chat.FirstName); err != nil{
+					fmt.Println(err)
+				}
+				_, _ = ReadUserByID(upM.Chat.ID)
 				StartMenu(upM.Chat.ID, bot)
 			} 
 		}
@@ -95,6 +93,8 @@ func main() {
 				ServiceMenu(upCQ.Message.Chat.ID, bot)
 			case "FAQ": 
 				FAQ(upCQ.Message.Chat.ID, bot)
+			case "Profile":
+				Profile(upCQ.Message.Chat.ID, bot)
 			case "нахуй":
 				NewMessage(upCQ.Message.Chat.ID, bot, "нахуй", true)
 			}

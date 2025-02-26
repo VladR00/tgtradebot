@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"sync"
+	"fmt"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
@@ -66,4 +67,25 @@ func ServiceMenu(chatID int64, bot *tgbotapi.BotAPI){
 			log.Println("Error sending start menu: ", err)
 		}
 		go AddToDelete(sent.Chat.ID, sent.MessageID)	
+}
+func Profile(chatID int64, bot *tgbotapi.BotAPI){
+	go ClearMessages(chatID, bot)
+	user, err := ReadUserByID(chatID)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	msg := tgbotapi.NewMessage(chatID, fmt.Sprintf("ID: %d\nLinkname: %s\nUsername: %s\nBalance: %d\nRegistration Time: %s", user.ChatID, user.LinkName, user.UserName, user.Balance, user.Time))
+		keyboard := tgbotapi.NewInlineKeyboardMarkup(
+			tgbotapi.NewInlineKeyboardRow(
+				tgbotapi.NewInlineKeyboardButtonData("Top Up", "Services"),
+				tgbotapi.NewInlineKeyboardButtonData("Back", "Menu"),
+			),
+		)
+		msg.ReplyMarkup = keyboard
+		sent, err := bot.Send(msg)
+		if err != nil {
+			log.Println("Error sending start menu: ", err)
+		}
+		go AddToDelete(sent.Chat.ID, sent.MessageID)
 }
