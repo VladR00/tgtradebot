@@ -55,7 +55,7 @@ func ServiceMenu(chatID int64, bot *tgbotapi.BotAPI){
 		msg := tgbotapi.NewMessage(chatID, fmt.Sprintf("%v",err))
 		keyboard := tgbotapi.NewInlineKeyboardMarkup(
 			tgbotapi.NewInlineKeyboardRow(
-				tgbotapi.NewInlineKeyboardButtonData("Back", "Menu"),
+				tgbotapi.NewInlineKeyboardButtonData("Fix", "Menu"),
 			),
 		)
 		msg.ReplyMarkup = keyboard
@@ -91,7 +91,7 @@ func Profile(chatID int64, bot *tgbotapi.BotAPI){
 		msg := tgbotapi.NewMessage(chatID, fmt.Sprintf("%v",err))
 		keyboard := tgbotapi.NewInlineKeyboardMarkup(
 			tgbotapi.NewInlineKeyboardRow(
-				tgbotapi.NewInlineKeyboardButtonData("Back", "Menu"),
+				tgbotapi.NewInlineKeyboardButtonData("Fix", "Menu"),
 			),
 		)
 		msg.ReplyMarkup = keyboard
