@@ -50,6 +50,22 @@ func FAQ(chatID int64, bot *tgbotapi.BotAPI){
 }
 func ServiceMenu(chatID int64, bot *tgbotapi.BotAPI){
 	go ClearMessages(chatID, bot)
+	_, err := ReadUserByID(chatID)
+	if err != nil {
+		msg := tgbotapi.NewMessage(chatID, fmt.Sprintf("%v",err))
+		keyboard := tgbotapi.NewInlineKeyboardMarkup(
+			tgbotapi.NewInlineKeyboardRow(
+				tgbotapi.NewInlineKeyboardButtonData("Back", "Menu"),
+			),
+		)
+		msg.ReplyMarkup = keyboard
+		sent, err := bot.Send(msg)
+		if err != nil {
+			log.Println("Error sending start menu: ", err)
+		}
+		go AddToDelete(sent.Chat.ID, sent.MessageID)
+		return
+	}
 	msg := tgbotapi.NewMessage(chatID, "Services")
 		keyboard := tgbotapi.NewInlineKeyboardMarkup(
 			tgbotapi.NewInlineKeyboardRow(
@@ -72,7 +88,18 @@ func Profile(chatID int64, bot *tgbotapi.BotAPI){
 	go ClearMessages(chatID, bot)
 	user, err := ReadUserByID(chatID)
 	if err != nil {
-		fmt.Println(err)
+		msg := tgbotapi.NewMessage(chatID, fmt.Sprintf("%v",err))
+		keyboard := tgbotapi.NewInlineKeyboardMarkup(
+			tgbotapi.NewInlineKeyboardRow(
+				tgbotapi.NewInlineKeyboardButtonData("Back", "Menu"),
+			),
+		)
+		msg.ReplyMarkup = keyboard
+		sent, err := bot.Send(msg)
+		if err != nil {
+			log.Println("Error sending start menu: ", err)
+		}
+		go AddToDelete(sent.Chat.ID, sent.MessageID)
 		return
 	}
 	msg := tgbotapi.NewMessage(chatID, fmt.Sprintf("ID: %d\nLinkname: %s\nUsername: %s\nBalance: %d\nRegistration Time: %s", user.ChatID, user.LinkName, user.UserName, user.Balance, user.Time))

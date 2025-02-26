@@ -94,4 +94,28 @@ func ReadUserByID(chatID int64) (*User, error){
 	user.Time = time.Unix(registrationTime, 0).Format("2006-01-02 15:04")
 	return user, nil
 }
-//func UpdateUsersDB(chatID int64){}
+func UpdateUsersDB(chatID int64, topUp int64) error{
+	db, err := OpenDB()
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+
+	query := ("UPDATE users SET balance = balance + ? WHERE chat_id = ?")
+
+	result, err := db.Exec(query, topUp, chatID)
+	if err != nil {
+		return fmt.Errorf("Can't update balance from users: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected() 
+	if err != nil {
+		return fmt.Errorf("Can't update balance from users while checking RowsAffected: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("ChatID: %d; Isn't updated, user not found (maybe).", chatID)
+	}
+
+	return nil
+}

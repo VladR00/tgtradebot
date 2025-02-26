@@ -77,7 +77,6 @@ func main() {
 				if err := InsertNewUsersDB(upM.Chat.ID, fmt.Sprintf("@%s",upM.Chat.UserName), upM.Chat.FirstName); err != nil{
 					fmt.Println(err)
 				}
-				_, _ = ReadUserByID(upM.Chat.ID)
 				StartMenu(upM.Chat.ID, bot)
 			} 
 		}
@@ -88,6 +87,9 @@ func main() {
 			}
 			switch upCQ.Data {
 			case "Menu":
+				if err := InsertNewUsersDB(upCQ.Message.Chat.ID, fmt.Sprintf("@%s",upCQ.Message.Chat.UserName), upCQ.Message.Chat.FirstName); err != nil{
+					fmt.Println(err)
+				}
 				StartMenu(upCQ.Message.Chat.ID, bot)
 			case "Services":
 				ServiceMenu(upCQ.Message.Chat.ID, bot)

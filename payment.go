@@ -59,6 +59,13 @@ func CheckPaymentStatus(bot *tgbotapi.BotAPI, chatID int64, client *cryptobot.Cl
 			if invoice.Status == cryptobot.InvoicePaidStatus {
 				if strconv.FormatInt(invoice.ID, 10)+strconv.FormatInt(chatID, 10) == targetinvoice {
 					go ClearMessages(chatID, bot)
+					topup, err := strconv.Atoi(invoice.Amount)
+					if err != nil {
+						fmt.Printf("\nn\\n\n\n\n\n\n\n Error convert: %w", err)
+					}
+					if err = UpdateUsersDB(chatID, int64(topup)); err != nil{
+						fmt.Println(err)
+					}
 					msg := tgbotapi.NewMessage(chatID, "good")
 					keyboard := tgbotapi.NewInlineKeyboardMarkup(
 						tgbotapi.NewInlineKeyboardRow(
