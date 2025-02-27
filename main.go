@@ -20,7 +20,6 @@ type Config struct {
 var (
 	bot                         *tgbotapi.BotAPI
 	cryptoClient                *cryptobot.Client
-	Supbot						*tgbotapi.BotAPI
 )
 
 func loadConfig(filename string) (Config, error) {
@@ -41,28 +40,35 @@ func main() {
 		log.Fatalf("Failed to load config: %v", err)
 	}
 
-	bot, err = tgbotapi.NewBotAPI(config.TelegramBotToken)
-	if err != nil {
-		log.Fatalf("Error creating bot: %v", err)
-	}
-
-	if err = CreateDB(); err != nil {
-		fmt.Println(err)
-		return
-	}
-	
-	// Supbot, err = tgbotapi.NewBotAPI(config.TelegramSupBotToken)
-	// if err != nil {
-	// 	log.Fatalf("Error creating bot: %v", err)
-	// }
-
 	cryptoClient = cryptobot.NewClient(cryptobot.Options{
 		Testing:  true,
 		APIToken: config.CryptoBotToken,
 	})
 
-	log.Printf("Authorized on account %s", bot.Self.UserName)
-	//go supbotupdates()
+	if err = CreateDB(); err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	botmain, err := tgbotapi.NewBotAPI(config.TelegramBotToken)
+	if err != nil {
+		log.Fatalf("Error creating bot: %v", err)
+	}
+
+	log.Printf("Authorized on account %s", botmain.Self.UserName)
+	
+	botsup, err := tgbotapi.NewBotAPI(config.TelegramSupBotToken)
+	if err != nil {
+		log.Fatalf("Error creating bot: %v", err)
+	}
+	log.Printf("Authorized on account %s", botsup.Self.UserName)
+
+	go supBotUpdates(botsup)
+	go mainBotUpdates(botmain)
+	select {} //it's like for infinity "oo"
+}
+
+func mainBotUpdates(bot *tgbotapi.BotAPI){
 	bot.Debug = true 
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 60
@@ -99,6 +105,30 @@ func main() {
 				Profile(upCQ.Message.Chat.ID, bot)
 			case "нахуй":
 				NewMessage(upCQ.Message.Chat.ID, bot, "нахуй", true)
+			}
+		}
+	}
+}
+func supBotUpdates(bot *tgbotapi.BotAPI){
+	bot.Debug = true 
+	u := tgbotapi.NewUpdate(0)
+	u.Timeout = 60
+
+	updates := bot.GetUpdatesChan(u)
+
+	for update := range updates {
+		if update.Message != nil {
+			upM := update.Message;
+			switch upM.Text {
+			case "/start":
+				NewMessage(upM.Chat.ID, bot, "старт епт", false)
+			} 
+		}
+		if update.CallbackQuery != nil {
+			upCQ := update.CallbackQuery;
+			switch upCQ.Data {
+			case "Menu":
+				NewMessage(upCQ.Message.Chat.ID, bot, "старт епт", false)
 			}
 		}
 	}

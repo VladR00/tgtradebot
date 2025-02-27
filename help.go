@@ -11,7 +11,7 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
-func NewMessage(chatID int64, bot *tgbotapi.BotAPI,message string, needDelete bool){
+func NewMessage(chatID int64, bot *tgbotapi.BotAPI, message string, needDelete bool){
 	sent, err := bot.Send(tgbotapi.NewMessage(chatID, message))
 	if err != nil {
 		log.Println("Error sending message: ", err)
