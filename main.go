@@ -45,7 +45,7 @@ func main() {
 		APIToken: config.CryptoBotToken,
 	})
 
-	if err = CreateDB(); err != nil {
+	if err = CreateDBusers(); err != nil {
 		fmt.Println(err)
 		return
 	}
@@ -99,12 +99,8 @@ func mainBotUpdates(bot *tgbotapi.BotAPI){
 				StartMenu(upCQ.Message.Chat.ID, bot)
 			case "Services":
 				ServiceMenu(upCQ.Message.Chat.ID, bot)
-			case "FAQ": 
-				FAQ(upCQ.Message.Chat.ID, bot)
 			case "Profile":
 				Profile(upCQ.Message.Chat.ID, bot)
-			case "нахуй":
-				NewMessage(upCQ.Message.Chat.ID, bot, "нахуй", true)
 			}
 		}
 	}
@@ -121,14 +117,14 @@ func supBotUpdates(bot *tgbotapi.BotAPI){
 			upM := update.Message;
 			switch upM.Text {
 			case "/start":
-				NewMessage(upM.Chat.ID, bot, "старт епт", false)
+				StartSupMenu(upM.Chat.ID, bot)
 			} 
 		}
 		if update.CallbackQuery != nil {
 			upCQ := update.CallbackQuery;
 			switch upCQ.Data {
 			case "Menu":
-				NewMessage(upCQ.Message.Chat.ID, bot, "старт епт", false)
+				StartSupMenu(upCQ.Message.Chat.ID, bot)
 			}
 		}
 	}

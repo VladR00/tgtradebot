@@ -19,6 +19,16 @@ type User struct{
 	Time 		string
 }
 
+func IsTableExists(db *sql.DB, tableName string) bool {
+	query := `SELECT count(*) FROM sqlite_master WHERE type='table' AND name=?;`
+	var count int
+	err := db.QueryRow(query, tableName).Scan(&count)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	return count > 0
+}
 
 func OpenDB() (*sql.DB, error){
 	db, err := sql.Open("sqlite3", path) 
@@ -32,14 +42,19 @@ func OpenDB() (*sql.DB, error){
 	return db, nil
 }
 
-func CreateDB() error{
+func CreateDBusers() error{
 	db, err := OpenDB()
 	if err != nil {
 		return err
 	}
 	defer db.Close()
 
-	query, err := db.Prepare("CREATE TABLE IF NOT EXISTS users (chat_id INTEGER PRIMARY KEY, linkname TEXT, username TEXT, balance DECIMAL(15,2), registration_time INTEGER)")
+	query, err := db.Prepare(`
+	CREATE TABLE IF NOT EXISTS users (
+		chat_id INTEGER PRIMARY KEY,
+		linkname TEXT, username TEXT,
+		balance DECIMAL(15,2),
+		registration_time INTEGER)`)
 	if err != nil {
 		return fmt.Errorf("Can't preparing query for creating table users: %w", err)
 	}
