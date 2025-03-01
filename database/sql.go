@@ -19,6 +19,18 @@ type User struct{
 	Time 		string
 }
 
+type Staff struct{
+	ChatID			int64
+	Admin			bool	
+	Busy 			bool
+	CurrentTicket 	int64
+	LinkName		string
+	UserName		string
+	TicketClosed	int64
+	Rating 			int64
+	Time 			string
+}
+
 func IsTableExists(db *sql.DB, tableName string) bool {
 	query := `SELECT count(*) FROM sqlite_master WHERE type='table' AND name=?;`
 	var count int
@@ -52,13 +64,22 @@ func CreateTable(table string) error{
 	switch table {
 		case "users":
 			q = `CREATE TABLE IF NOT EXISTS users (
-				chat_id INTEGER PRIMARY KEY,
-				linkname TEXT, username TEXT,
-				balance DECIMAL(15,2),
-				registration_time INTEGER)`
+					chat_id INTEGER PRIMARY KEY,
+					linkname TEXT, 
+					username TEXT,
+					balance DECIMAL(15,2),
+					registration_time INTEGER)`
 		case "staff":
 			q = `CREATE TABLE IF NOT EXISTS staff (
-				`
+					chat_id INTEGER PRIMARY KEY,
+					admin BOOL,
+					busy BOOL,
+					current_ticket INTEGER,
+					linkname TEXT, 
+					username TEXT,
+					ticket_closed INTEGER,
+					rating INTEGER,
+					registration_time INTEGER)`
 		case "bookkeeping":
 			q = `CREATE TABLE IF NOT EXISTS bookkeeping (
 				`
@@ -77,7 +98,7 @@ func CreateTable(table string) error{
 	return nil
 }
 
-func InsertNewUsersDB(chatID int64, linkname string, username string) error{
+func InsertNewUser(chatID int64, linkname string, username string) error{
 	db, err := OpenDB()
 	if err != nil {
 		return err
@@ -92,6 +113,25 @@ func InsertNewUsersDB(chatID int64, linkname string, username string) error{
 
 	if _, err = query.Exec(chatID, linkname, username, 0, time.Now().Unix()); err != nil {
 		return fmt.Errorf("Can't execute inserting new users into users: %w", err)
+	}
+	return nil
+}
+
+func InsertNewStaff(chatID int64, admin bool, linkname string, username string) error{
+	db, err := OpenDB()
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+
+	query, err := db.Prepare("INSERT INTO staff (chat_id, admin, busy, current_ticket, linkname, username, ticket_closed, rating, registration_time) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)")
+	if err != nil {
+		return fmt.Errorf("Can't preparing query for insert new staff into staff: %w", err)
+	}
+	defer query.Close()
+
+	if _, err = query.Exec(chatID, admin, false, 0, linkname, username, 0, 0, time.Now().Unix()); err != nil {
+		return fmt.Errorf("Can't execute inserting new staff into staff: %w", err)
 	}
 	return nil
 }
@@ -114,11 +154,36 @@ func ReadUserByID(chatID int64) (*User, error){
 		if err == sql.ErrNoRows{
 			return nil, fmt.Errorf("User not found while reads user: %w", err)
 		}
-		return nil, fmt.Errorf("Undefined error while reads user")
+		return nil, fmt.Errorf("Undefined error while reads user: %w", err)
 	}
 	user.Time = time.Unix(registrationTime, 0).Format("2006-01-02 15:04")
 	return user, nil
 }
+
+func ReadStaffByID(chatID int64) (*Staff, error){
+	db, err := OpenDB()
+	if err != nil {
+		return nil, err
+	}
+	defer db.Close()
+
+	query := ("SELECT * FROM staff WHERE chat_id = ?")
+
+	staff := &Staff{}
+	var registrationTime int64
+
+	row := db.QueryRow(query, chatID)
+	err = row.Scan(&staff.ChatID, &staff.Admin, &staff.Busy, &staff.CurrentTicket, &staff.LinkName, &staff.UserName, &staff.TicketClosed, &staff.Rating, &registrationTime) 
+	if err != nil {
+		if err == sql.ErrNoRows{
+			return nil, fmt.Errorf("Staff not found while reads staff: %w", err)
+		}
+		return nil, fmt.Errorf("Undefined error while reads staff: %w", err)
+	}
+	staff.Time = time.Unix(registrationTime, 0).Format("2006-01-02 15:04")
+	return staff, nil
+}
+
 func UpdateUsersDB(chatID int64, topUp int64) error{
 	db, err := OpenDB()
 	if err != nil {

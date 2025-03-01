@@ -8,7 +8,11 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
-func StartMenu(chatID int64, bot *tgbotapi.BotAPI){
+func StartMenu(upM *tgbotapi.Chat, bot *tgbotapi.BotAPI){
+	chatID := upM.ID
+	if err := database.InsertNewUser(chatID, fmt.Sprintf("@%s",upM.UserName), upM.FirstName); err != nil{
+		fmt.Println(err)
+	}
 	go help.ClearMessages(chatID, bot)
 	msg := tgbotapi.NewMessage(chatID, "hello muchahos")
 		keyboard := tgbotapi.NewInlineKeyboardMarkup(

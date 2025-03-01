@@ -11,6 +11,7 @@ import (
 	mainbot  "tgbottrade/mainbot"
 	supbot	 "tgbottrade/supbot"
 	payment	 "tgbottrade/payment"
+	staffbot "tgbottrade/staffbot"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
@@ -65,10 +66,7 @@ func mainBotUpdates(bot *tgbotapi.BotAPI){
 			upM := update.Message;
 			switch upM.Text {
 			case "/start":
-				if err := database.InsertNewUsersDB(upM.Chat.ID, fmt.Sprintf("@%s",upM.Chat.UserName), upM.Chat.FirstName); err != nil{
-					fmt.Println(err)
-				}
-				mainbot.StartMenu(upM.Chat.ID, bot)
+				mainbot.StartMenu(upM.Chat, bot)
 			} 
 		}
 		if update.CallbackQuery != nil {
@@ -78,10 +76,7 @@ func mainBotUpdates(bot *tgbotapi.BotAPI){
 			}
 			switch upCQ.Data {
 				case "Menu":
-					if err := database.InsertNewUsersDB(upCQ.Message.Chat.ID, fmt.Sprintf("@%s",upCQ.Message.Chat.UserName), upCQ.Message.Chat.FirstName); err != nil{
-						fmt.Println(err)
-					}
-					mainbot.StartMenu(upCQ.Message.Chat.ID, bot)
+					mainbot.StartMenu(upCQ.Message.Chat, bot)
 				case "Services":
 					mainbot.ServiceMenu(upCQ.Message.Chat.ID, bot)
 				case "Profile":
@@ -96,20 +91,22 @@ func supBotUpdates(bot *tgbotapi.BotAPI){
 	u.Timeout = 60
 
 	updates := bot.GetUpdatesChan(u)
-
+	
 	for update := range updates {
 		if update.Message != nil {
-			upM := update.Message;
-			switch upM.Text {
-			case "/start":
-				supbot.StartMenu(upM.Chat.ID, bot)
-			} 
+			staff, _ := database.ReadStaffByID(update.Message.Chat.ID)
+			if (staff != nil){
+				go staffbot.HandleMessageSwitchForAuthorizedInTableStaff(update, bot, staff)			//Authorized
+			} else {
+				go supbot.HandleMessageSwitchForUnauthorizedInTableStaff(update, bot)					//Unauthorized
+			}
 		}
 		if update.CallbackQuery != nil {
-			upCQ := update.CallbackQuery;
-			switch upCQ.Data {
-				case "Menu":
-					supbot.StartMenu(upCQ.Message.Chat.ID, bot)
+			staff, _ := database.ReadStaffByID(update.CallbackQuery.Message.Chat.ID)
+			if (staff != nil){
+				go staffbot.HandleCallBackSwitchForAuthorizedInTableStaff(update, bot, staff)			//Authorized
+			} else {
+				go supbot.HandleCallBackSwitchForUnauthorizedInTableStaff(update, bot)					//Unauthorized
 			}
 		}
 	}
