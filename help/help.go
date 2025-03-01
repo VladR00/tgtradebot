@@ -1,4 +1,4 @@
-package main
+package help
 
 import (
 	"fmt"
@@ -7,9 +7,20 @@ import (
 	"bufio"
 	"strconv"
 	"strings"
+	"sync"
+	"encoding/json"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
+var (
+	messagesMutex   sync.Mutex
+)
+
+type Config struct {
+	TelegramBotToken string 	`json:"TokenTGbot"`
+	TelegramSupBotToken string 	`json:"TokenSupbot"`
+	CryptoBotToken   string 	`json:"TokenCryptobot"`
+}
 
 func NewMessage(chatID int64, bot *tgbotapi.BotAPI, message string, needDelete bool){
 	sent, err := bot.Send(tgbotapi.NewMessage(chatID, message))
@@ -92,4 +103,16 @@ func ClearMessages(chatID int64, bot *tgbotapi.BotAPI) {
 		}
 	}
 	writer.Flush()
+}
+
+func LoadConfig(filename string) (Config, error) {
+	var config Config
+	file, err := os.Open(filename)
+	if err != nil {
+		return config, err
+	}
+	defer file.Close()
+	decoder := json.NewDecoder(file)
+	err = decoder.Decode(&config)
+	return config, err
 }

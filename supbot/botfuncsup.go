@@ -1,14 +1,15 @@
-package main
+package supbot
 
 import (
-	//"sync"
 	"fmt"
 
+	//database "tgbottrade/database"
+	help 	 "tgbottrade/help"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
-func StartSupMenu(chatID int64, bot *tgbotapi.BotAPI){
-	go ClearMessages(chatID, bot)
+func StartMenu(chatID int64, bot *tgbotapi.BotAPI){
+	go help.ClearMessages(chatID, bot)
 	msg := tgbotapi.NewMessage(chatID, "sup")
 		keyboard := tgbotapi.NewInlineKeyboardMarkup(
 			tgbotapi.NewInlineKeyboardRow(
@@ -20,5 +21,5 @@ func StartSupMenu(chatID int64, bot *tgbotapi.BotAPI){
 		if err != nil {
 			fmt.Println("Error sending start menu: ", err)
 		}
-		go AddToDelete(sent.Chat.ID, sent.MessageID)	
+		go help.AddToDelete(sent.Chat.ID, sent.MessageID)	
 }

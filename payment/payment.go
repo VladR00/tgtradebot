@@ -1,4 +1,4 @@
-package main
+package payment
 
 import (
 	"time"
@@ -6,12 +6,15 @@ import (
 	"log"
 	"strconv"
 	"github.com/arthurshafikov/cryptobot-sdk-golang/cryptobot"
+
+	help 	 "tgbottrade/help"
+	database "tgbottrade/database"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
 func TopUp(bot *tgbotapi.BotAPI, chatID int64, client *cryptobot.Client, asset string, amount string) {
-	go ClearMessages(chatID, bot)
-	NewMessage(chatID, bot, "Creating invoice...",  true)
+	go help.ClearMessages(chatID, bot)
+	help.NewMessage(chatID, bot, "Creating invoice...",  true)
 	invoice, err := client.CreateInvoice(cryptobot.CreateInvoiceRequest{
 		Asset:          asset,
 		Amount:         amount,
@@ -26,13 +29,13 @@ func TopUp(bot *tgbotapi.BotAPI, chatID int64, client *cryptobot.Client, asset s
 	})
 	if err != nil {
 		log.Println("Error creating invoice:", err)
-		NewMessage(chatID, bot, "Error creating invoice",  true)
+		help.NewMessage(chatID, bot, "Error creating invoice",  true)
 		go func() {
 			time.Sleep(3 * time.Second)
 			TopUp(bot, chatID, client, asset, amount)
 		}()
 	}
-	go ClearMessages(chatID, bot)
+	go help.ClearMessages(chatID, bot)
 	msg := tgbotapi.NewMessage(chatID, fmt.Sprintf("Pay %s %s to address %s", invoice.Amount, invoice.Asset, invoice.PayUrl))
 	keyboard := tgbotapi.NewInlineKeyboardMarkup(
 		tgbotapi.NewInlineKeyboardRow(
@@ -44,7 +47,7 @@ func TopUp(bot *tgbotapi.BotAPI, chatID int64, client *cryptobot.Client, asset s
 	if err != nil {
 		log.Println("Error sending message: ", err)
 	}
-	go AddToDelete(sentMsg.Chat.ID, sentMsg.MessageID)
+	go help.AddToDelete(sentMsg.Chat.ID, sentMsg.MessageID)
 	go CheckPaymentStatus(bot, chatID, client, strconv.FormatInt(invoice.ID, 10)+strconv.FormatInt(chatID, 10))
 }
 func CheckPaymentStatus(bot *tgbotapi.BotAPI, chatID int64, client *cryptobot.Client, targetinvoice string) {
@@ -58,12 +61,12 @@ func CheckPaymentStatus(bot *tgbotapi.BotAPI, chatID int64, client *cryptobot.Cl
 		for _, invoice := range invoices {
 			if invoice.Status == cryptobot.InvoicePaidStatus {
 				if strconv.FormatInt(invoice.ID, 10)+strconv.FormatInt(chatID, 10) == targetinvoice {
-					go ClearMessages(chatID, bot)
+					go help.ClearMessages(chatID, bot)
 					topup, err := strconv.Atoi(invoice.Amount)
 					if err != nil {
 						fmt.Printf("\nn\\n\n\n\n\n\n\n Error convert: %w", err)
 					}
-					if err = UpdateUsersDB(chatID, int64(topup)); err != nil{
+					if err = database.UpdateUsersDB(chatID, int64(topup)); err != nil{
 						fmt.Println(err)
 					}
 					msg := tgbotapi.NewMessage(chatID, "good")
@@ -77,9 +80,9 @@ func CheckPaymentStatus(bot *tgbotapi.BotAPI, chatID int64, client *cryptobot.Cl
 					if err != nil {
 						log.Println("Error sending message: ", err)
 					}
-					go AddToDelete(sentMsg.Chat.ID, sentMsg.MessageID)
+					go help.AddToDelete(sentMsg.Chat.ID, sentMsg.MessageID)
 					log.Printf("Invoice %d paid!\n", invoice.ID)
-					NewMessage(chatID, bot, fmt.Sprintf("Invoice %d paid!\n", invoice.ID), false)
+					help.NewMessage(chatID, bot, fmt.Sprintf("Invoice %d paid!\n", invoice.ID), false)
 					return
 				}
 			}

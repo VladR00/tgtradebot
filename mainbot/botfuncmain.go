@@ -1,17 +1,15 @@
-package main
+package mainbot
 
 import (
-	"sync"
 	"fmt"
 
+	database "tgbottrade/database"
+	help 	 "tgbottrade/help"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
-)
-var (
-	messagesMutex   sync.Mutex
 )
 
 func StartMenu(chatID int64, bot *tgbotapi.BotAPI){
-	go ClearMessages(chatID, bot)
+	go help.ClearMessages(chatID, bot)
 	msg := tgbotapi.NewMessage(chatID, "hello muchahos")
 		keyboard := tgbotapi.NewInlineKeyboardMarkup(
 			tgbotapi.NewInlineKeyboardRow(
@@ -25,12 +23,12 @@ func StartMenu(chatID int64, bot *tgbotapi.BotAPI){
 		if err != nil {
 			fmt.Println("Error sending start menu: ", err)
 		}
-		go AddToDelete(sent.Chat.ID, sent.MessageID)	
+		go help.AddToDelete(sent.Chat.ID, sent.MessageID)	
 }
 
 func ServiceMenu(chatID int64, bot *tgbotapi.BotAPI){
-	go ClearMessages(chatID, bot)
-	_, err := ReadUserByID(chatID)
+	go help.ClearMessages(chatID, bot)
+	_, err := database.ReadUserByID(chatID)
 	if err != nil {
 		msg := tgbotapi.NewMessage(chatID, fmt.Sprintf("%v",err))
 		keyboard := tgbotapi.NewInlineKeyboardMarkup(
@@ -43,7 +41,7 @@ func ServiceMenu(chatID int64, bot *tgbotapi.BotAPI){
 		if err != nil {
 			fmt.Println("Error sending start menu: ", err)
 		}
-		go AddToDelete(sent.Chat.ID, sent.MessageID)
+		go help.AddToDelete(sent.Chat.ID, sent.MessageID)
 		return
 	}
 	msg := tgbotapi.NewMessage(chatID, "Services")
@@ -62,11 +60,11 @@ func ServiceMenu(chatID int64, bot *tgbotapi.BotAPI){
 		if err != nil {
 			fmt.Println("Error sending start menu: ", err)
 		}
-		go AddToDelete(sent.Chat.ID, sent.MessageID)	
+		go help.AddToDelete(sent.Chat.ID, sent.MessageID)	
 }
 func Profile(chatID int64, bot *tgbotapi.BotAPI){
-	go ClearMessages(chatID, bot)
-	user, err := ReadUserByID(chatID)
+	go help.ClearMessages(chatID, bot)
+	user, err := database.ReadUserByID(chatID)
 	if err != nil {
 		msg := tgbotapi.NewMessage(chatID, fmt.Sprintf("%v",err))
 		keyboard := tgbotapi.NewInlineKeyboardMarkup(
@@ -79,7 +77,7 @@ func Profile(chatID int64, bot *tgbotapi.BotAPI){
 		if err != nil {
 			fmt.Println("Error sending start menu: ", err)
 		}
-		go AddToDelete(sent.Chat.ID, sent.MessageID)
+		go help.AddToDelete(sent.Chat.ID, sent.MessageID)
 		return
 	}
 	msg := tgbotapi.NewMessage(chatID, fmt.Sprintf("ID: %d\nLinkname: %s\nUsername: %s\nBalance: %d\nRegistration Time: %s", user.ChatID, user.LinkName, user.UserName, user.Balance, user.Time))
@@ -94,5 +92,5 @@ func Profile(chatID int64, bot *tgbotapi.BotAPI){
 		if err != nil {
 			fmt.Println("Error sending start menu: ", err)
 		}
-		go AddToDelete(sent.Chat.ID, sent.MessageID)
+		go help.AddToDelete(sent.Chat.ID, sent.MessageID)
 }

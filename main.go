@@ -1,41 +1,26 @@
 package main
 
 import (
-	"encoding/json"
 	"log"
-	"os"
 	"strings"
 	"fmt"
 
 	"github.com/arthurshafikov/cryptobot-sdk-golang/cryptobot"
+	database "tgbottrade/database"
+	help	 "tgbottrade/help"
+	mainbot  "tgbottrade/mainbot"
+	supbot	 "tgbottrade/supbot"
+	payment	 "tgbottrade/payment"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
-
-type Config struct {
-	TelegramBotToken string 	`json:"TokenTGbot"`
-	TelegramSupBotToken string 	`json:"TokenSupbot"`
-	CryptoBotToken   string 	`json:"TokenCryptobot"`
-}
 
 var (
 	bot                         *tgbotapi.BotAPI
 	cryptoClient                *cryptobot.Client
 )
 
-func loadConfig(filename string) (Config, error) {
-	var config Config
-	file, err := os.Open(filename)
-	if err != nil {
-		return config, err
-	}
-	defer file.Close()
-	decoder := json.NewDecoder(file)
-	err = decoder.Decode(&config)
-	return config, err
-}
-
 func main() {
-	config, err := loadConfig("config.json")
+	config, err := help.LoadConfig("config.json")
 	if err != nil {
 		log.Fatalf("Failed to load config: %v", err)
 	}
@@ -45,7 +30,7 @@ func main() {
 		APIToken: config.CryptoBotToken,
 	})
 
-	if err = CreateDBusers(); err != nil {
+	if err = database.CreateDBusers(); err != nil {
 		fmt.Println(err)
 		return
 	}
@@ -80,27 +65,27 @@ func mainBotUpdates(bot *tgbotapi.BotAPI){
 			upM := update.Message;
 			switch upM.Text {
 			case "/start":
-				if err := InsertNewUsersDB(upM.Chat.ID, fmt.Sprintf("@%s",upM.Chat.UserName), upM.Chat.FirstName); err != nil{
+				if err := database.InsertNewUsersDB(upM.Chat.ID, fmt.Sprintf("@%s",upM.Chat.UserName), upM.Chat.FirstName); err != nil{
 					fmt.Println(err)
 				}
-				StartMenu(upM.Chat.ID, bot)
+				mainbot.StartMenu(upM.Chat.ID, bot)
 			} 
 		}
 		if update.CallbackQuery != nil {
 			upCQ := update.CallbackQuery;
 			if strings.HasPrefix(upCQ.Data, "topup"){
-				TopUp(bot, upCQ.Message.Chat.ID, cryptoClient, "TRX", strings.TrimPrefix(upCQ.Data, "topup"))
+				payment.TopUp(bot, upCQ.Message.Chat.ID, cryptoClient, "TRX", strings.TrimPrefix(upCQ.Data, "topup"))
 			}
 			switch upCQ.Data {
 			case "Menu":
-				if err := InsertNewUsersDB(upCQ.Message.Chat.ID, fmt.Sprintf("@%s",upCQ.Message.Chat.UserName), upCQ.Message.Chat.FirstName); err != nil{
+				if err := database.InsertNewUsersDB(upCQ.Message.Chat.ID, fmt.Sprintf("@%s",upCQ.Message.Chat.UserName), upCQ.Message.Chat.FirstName); err != nil{
 					fmt.Println(err)
 				}
-				StartMenu(upCQ.Message.Chat.ID, bot)
+				mainbot.StartMenu(upCQ.Message.Chat.ID, bot)
 			case "Services":
-				ServiceMenu(upCQ.Message.Chat.ID, bot)
+				mainbot.ServiceMenu(upCQ.Message.Chat.ID, bot)
 			case "Profile":
-				Profile(upCQ.Message.Chat.ID, bot)
+				mainbot.Profile(upCQ.Message.Chat.ID, bot)
 			}
 		}
 	}
@@ -117,14 +102,14 @@ func supBotUpdates(bot *tgbotapi.BotAPI){
 			upM := update.Message;
 			switch upM.Text {
 			case "/start":
-				StartSupMenu(upM.Chat.ID, bot)
+				supbot.StartMenu(upM.Chat.ID, bot)
 			} 
 		}
 		if update.CallbackQuery != nil {
 			upCQ := update.CallbackQuery;
 			switch upCQ.Data {
 			case "Menu":
-				StartSupMenu(upCQ.Message.Chat.ID, bot)
+				supbot.StartMenu(upCQ.Message.Chat.ID, bot)
 			}
 		}
 	}
