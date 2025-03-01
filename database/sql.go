@@ -42,26 +42,36 @@ func OpenDB() (*sql.DB, error){
 	return db, nil
 }
 
-func CreateDBusers() error{
+func CreateTable(table string) error{
 	db, err := OpenDB()
 	if err != nil {
 		return err
 	}
 	defer db.Close()
+	var q string
+	switch table {
+		case "users":
+			q = `CREATE TABLE IF NOT EXISTS users (
+				chat_id INTEGER PRIMARY KEY,
+				linkname TEXT, username TEXT,
+				balance DECIMAL(15,2),
+				registration_time INTEGER)`
+		case "staff":
+			q = `CREATE TABLE IF NOT EXISTS staff (
+				`
+		case "bookkeeping":
+			q = `CREATE TABLE IF NOT EXISTS bookkeeping (
+				`
+	}
 
-	query, err := db.Prepare(`
-	CREATE TABLE IF NOT EXISTS users (
-		chat_id INTEGER PRIMARY KEY,
-		linkname TEXT, username TEXT,
-		balance DECIMAL(15,2),
-		registration_time INTEGER)`)
+	query, err := db.Prepare(q)
 	if err != nil {
-		return fmt.Errorf("Can't preparing query for creating table users: %w", err)
+		return fmt.Errorf("Can't preparing query for creating table %s: %w", table, err)
 	}
 	defer query.Close()
 
 	if _, err = query.Exec(); err != nil{
-		return fmt.Errorf("Can't execute create table users: %w", err)
+		return fmt.Errorf("Can't execute create table %s: %w", table, err)
 	}
 
 	return nil

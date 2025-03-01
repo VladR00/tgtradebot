@@ -30,7 +30,7 @@ func main() {
 		APIToken: config.CryptoBotToken,
 	})
 
-	if err = database.CreateDBusers(); err != nil {
+	if err = database.CreateTable("users"); err != nil {
 		fmt.Println(err)
 		return
 	}
@@ -77,15 +77,15 @@ func mainBotUpdates(bot *tgbotapi.BotAPI){
 				payment.TopUp(bot, upCQ.Message.Chat.ID, cryptoClient, "TRX", strings.TrimPrefix(upCQ.Data, "topup"))
 			}
 			switch upCQ.Data {
-			case "Menu":
-				if err := database.InsertNewUsersDB(upCQ.Message.Chat.ID, fmt.Sprintf("@%s",upCQ.Message.Chat.UserName), upCQ.Message.Chat.FirstName); err != nil{
-					fmt.Println(err)
-				}
-				mainbot.StartMenu(upCQ.Message.Chat.ID, bot)
-			case "Services":
-				mainbot.ServiceMenu(upCQ.Message.Chat.ID, bot)
-			case "Profile":
-				mainbot.Profile(upCQ.Message.Chat.ID, bot)
+				case "Menu":
+					if err := database.InsertNewUsersDB(upCQ.Message.Chat.ID, fmt.Sprintf("@%s",upCQ.Message.Chat.UserName), upCQ.Message.Chat.FirstName); err != nil{
+						fmt.Println(err)
+					}
+					mainbot.StartMenu(upCQ.Message.Chat.ID, bot)
+				case "Services":
+					mainbot.ServiceMenu(upCQ.Message.Chat.ID, bot)
+				case "Profile":
+					mainbot.Profile(upCQ.Message.Chat.ID, bot)
 			}
 		}
 	}
@@ -108,8 +108,8 @@ func supBotUpdates(bot *tgbotapi.BotAPI){
 		if update.CallbackQuery != nil {
 			upCQ := update.CallbackQuery;
 			switch upCQ.Data {
-			case "Menu":
-				supbot.StartMenu(upCQ.Message.Chat.ID, bot)
+				case "Menu":
+					supbot.StartMenu(upCQ.Message.Chat.ID, bot)
 			}
 		}
 	}
