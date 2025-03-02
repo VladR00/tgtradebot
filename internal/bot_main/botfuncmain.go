@@ -3,8 +3,8 @@ package mainbot
 import (
 	"fmt"
 
-	database "tgbottrade/database"
-	help 	 "tgbottrade/help"
+	database "tgbottrade/internal/database"
+	help 	 "tgbottrade/pkg/api/help"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 

@@ -7,8 +7,8 @@ import (
 
 	_ "github.com/mattn/go-sqlite3"
 )
-const (
-	path string = "./sql/sql.db"
+var (
+	DBpath = "../storage/sql.db"
 )
 
 type User struct{
@@ -43,7 +43,7 @@ func IsTableExists(db *sql.DB, tableName string) bool {
 }
 
 func OpenDB() (*sql.DB, error){
-	db, err := sql.Open("sqlite3", path) 
+	db, err := sql.Open("sqlite3", DBpath) 
 	if err != nil {
 		return nil, fmt.Errorf("Can't open DB: %w", err)
 	}

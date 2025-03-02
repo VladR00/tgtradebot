@@ -8,20 +8,15 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"encoding/json"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 var (
 	messagesMutex   sync.Mutex
 	messagesMutex1  sync.Mutex
+	messages	=	"../pkg/api/logger/messages.txt"
+	messages1 	=	"../pkg/api/logger/messages1.txt"
 )
-
-type Config struct {
-	TelegramBotToken string 	`json:"TokenTGbot"`
-	TelegramSupBotToken string 	`json:"TokenSupbot"`
-	CryptoBotToken   string 	`json:"TokenCryptobot"`
-}
 
 func NewMessage(chatID int64, bot *tgbotapi.BotAPI, message string, needDelete bool){
 	sent, err := bot.Send(tgbotapi.NewMessage(chatID, message))
@@ -47,7 +42,7 @@ func AddToDelete(chatID int64, messageID int) {
 	messagesMutex.Lock()
 	defer messagesMutex.Unlock()
 
-	file, err := os.OpenFile("./messages.txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	file, err := os.OpenFile(messages, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		log.Println("Error delete file: ",err)
 	}
@@ -59,7 +54,7 @@ func ClearMessages(chatID int64, bot *tgbotapi.BotAPI) {
 	messagesMutex.Lock()
 	defer messagesMutex.Unlock()
 
-	file, err := os.Open("./messages.txt")
+	file, err := os.Open(messages)
 	if err != nil {
 		log.Println("Error opening the delete file: ", err)
 		return
@@ -98,7 +93,7 @@ func ClearMessages(chatID int64, bot *tgbotapi.BotAPI) {
 		return
 	}
 
-	file, err = os.Create("./messages.txt")
+	file, err = os.Create(messages)
 	if err != nil {
 		log.Printf("Error opening the delete file for writing: %s", err)
 		return
@@ -116,23 +111,11 @@ func ClearMessages(chatID int64, bot *tgbotapi.BotAPI) {
 	writer.Flush()
 }
 
-func LoadConfig(filename string) (Config, error) {
-	var config Config
-	file, err := os.Open(filename)
-	if err != nil {
-		return config, err
-	}
-	defer file.Close()
-	decoder := json.NewDecoder(file)
-	err = decoder.Decode(&config)
-	return config, err
-}
-
 func AddToDelete1(chatID int64, messageID int) {
 	messagesMutex.Lock()
 	defer messagesMutex.Unlock()
 
-	file, err := os.OpenFile("./messages1.txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	file, err := os.OpenFile(messages1, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		log.Println("Error delete file: ",err)
 	}
@@ -144,7 +127,7 @@ func ClearMessages1(chatID int64, bot *tgbotapi.BotAPI) {
 	messagesMutex1.Lock()
 	defer messagesMutex1.Unlock()
 
-	file, err := os.Open("./messages1.txt")
+	file, err := os.Open(messages1)
 	if err != nil {
 		log.Println("Error opening the delete file: ", err)
 		return
@@ -183,7 +166,7 @@ func ClearMessages1(chatID int64, bot *tgbotapi.BotAPI) {
 		return
 	}
 
-	file, err = os.Create("./messages1.txt")
+	file, err = os.Create(messages1)
 	if err != nil {
 		log.Printf("Error opening the delete file for writing: %s", err)
 		return

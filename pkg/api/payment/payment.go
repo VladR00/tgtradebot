@@ -7,8 +7,8 @@ import (
 	"strconv"
 	"github.com/arthurshafikov/cryptobot-sdk-golang/cryptobot"
 
-	help 	 "tgbottrade/help"
-	database "tgbottrade/database"
+	help	 "tgbottrade/pkg/api/help"
+	database "tgbottrade/internal/database"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 

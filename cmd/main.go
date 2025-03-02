@@ -6,12 +6,14 @@ import (
 	"fmt"
 
 	"github.com/arthurshafikov/cryptobot-sdk-golang/cryptobot"
-	database "tgbottrade/database"
-	help	 "tgbottrade/help"
-	mainbot  "tgbottrade/mainbot"
-	supbot	 "tgbottrade/supbot"
-	payment	 "tgbottrade/payment"
-	staffbot "tgbottrade/staffbot"
+	database "tgbottrade/internal/database"
+	//help	 "tgbottrade/pkg/api/help"
+	mainbot  "tgbottrade/internal/bot_main"
+	supbot	 "tgbottrade/internal/bot_support/bot_user"
+	staffbot "tgbottrade/internal/bot_support/bot_staff"
+	payment	 "tgbottrade/pkg/api/payment"
+	config	 "tgbottrade/pkg/api/config"
+
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
@@ -21,7 +23,7 @@ var (
 )
 
 func main() {
-	config, err := help.LoadConfig("config.json")
+	config, err := config.LoadConfig("../config/config.json")
 	if err != nil {
 		log.Fatalf("Failed to load config: %v", err)
 	}

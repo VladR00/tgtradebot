@@ -3,8 +3,8 @@ package staffbot
 import (
 	"fmt"
 
-	database "tgbottrade/database"
-	help 	 "tgbottrade/help"
+	database "tgbottrade/internal/database"
+	help 	 "tgbottrade/pkg/api/help"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
@@ -28,15 +28,15 @@ func StartMenu(chatID int64, bot *tgbotapi.BotAPI){
 	go help.ClearMessages1(chatID, bot)
 
 	msg := tgbotapi.NewMessage(chatID, "сапорт")
-		keyboard := tgbotapi.NewInlineKeyboardMarkup(
-			tgbotapi.NewInlineKeyboardRow(
-				tgbotapi.NewInlineKeyboardButtonData("Menu", "Menu"),
-			),
-		)
-		msg.ReplyMarkup = keyboard
-		sent, err := bot.Send(msg)
-		if err != nil {
-			fmt.Println("Error sending start menu: ", err)
-		}
-		go help.AddToDelete1(sent.Chat.ID, sent.MessageID)	
+	keyboard := tgbotapi.NewInlineKeyboardMarkup(
+		tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonData("Menu", "Menu"),
+		),
+	)
+	msg.ReplyMarkup = keyboard
+	sent, err := bot.Send(msg)
+	if err != nil {
+		fmt.Println("Error sending start menu: ", err)
+	}
+	go help.AddToDelete1(sent.Chat.ID, sent.MessageID)	
 }

@@ -3,8 +3,8 @@ package supbot
 import (
 	"fmt"
 
-	database "tgbottrade/database"
-	help 	 "tgbottrade/help"
+	database "tgbottrade/internal/database"
+	help 	 "tgbottrade/pkg/api/help"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
@@ -15,7 +15,7 @@ func HandleMessageSwitchForUnauthorizedInTableStaff(update tgbotapi.Update, bot 
 			db, err := database.OpenDB()
 			if err != nil {
 				fmt.Println(err)
-				return 
+				break; 
 			}
 			var isStaffExists bool 
 			isStaffExists = true
@@ -33,6 +33,7 @@ func HandleMessageSwitchForUnauthorizedInTableStaff(update tgbotapi.Update, bot 
 				}
 				isStaffExists = true
 			}
+			StartMenu(upM.Chat.ID, bot)
 		case "/start":
 			StartMenu(upM.Chat.ID, bot)
 	}
