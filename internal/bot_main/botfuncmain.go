@@ -2,11 +2,40 @@ package mainbot
 
 import (
 	"fmt"
+	"strings"
 
 	database "tgbottrade/internal/database"
 	help 	 "tgbottrade/pkg/api/help"
+	payment	 "tgbottrade/pkg/api/payment"
+
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	"github.com/arthurshafikov/cryptobot-sdk-golang/cryptobot"
 )
+
+func HandleMessageSwitchForMain(update tgbotapi.Update, bot *tgbotapi.BotAPI){
+	upM := update.Message;
+	fmt.Printf("Handle message on main bot: %s. From user: %s\n", upM.Text, upM.Chat.UserName)
+	switch upM.Text {
+		case "/start":
+			StartMenu(upM.Chat, bot)
+	} 
+}
+
+func HandleCallBackSwitchForMain(update tgbotapi.Update, bot *tgbotapi.BotAPI, cryptoClient *cryptobot.Client){
+	upCQ := update.CallbackQuery;
+	fmt.Printf("Handle callback on main bot: %s. From user: %s\n", upCQ.Data, upCQ.Message.Chat.UserName)
+	if strings.HasPrefix(upCQ.Data, "topup"){
+		payment.TopUp(bot, upCQ.Message.Chat.ID, cryptoClient, "TRX", strings.TrimPrefix(upCQ.Data, "topup"))
+	}
+	switch upCQ.Data {
+		case "Menu":
+			 StartMenu(upCQ.Message.Chat, bot)
+		case "Services":
+			ServiceMenu(upCQ.Message.Chat.ID, bot)
+		case "Profile":
+			Profile(upCQ.Message.Chat.ID, bot)
+	}
+}
 
 func StartMenu(upM *tgbotapi.Chat, bot *tgbotapi.BotAPI){
 	chatID := upM.ID

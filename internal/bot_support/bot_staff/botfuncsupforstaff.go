@@ -10,6 +10,7 @@ import (
 
 func HandleMessageSwitchForAuthorizedInTableStaff(update tgbotapi.Update, bot *tgbotapi.BotAPI, staff *database.Staff){
 	upM := update.Message
+	fmt.Printf("Handle message on support bot from staff: %s. From user: %s\n", upM.Text, upM.Chat.UserName)
 	switch upM.Text {
 		case "/start":
 			StartMenu(upM.Chat.ID, bot)
@@ -18,6 +19,7 @@ func HandleMessageSwitchForAuthorizedInTableStaff(update tgbotapi.Update, bot *t
 
 func HandleCallBackSwitchForAuthorizedInTableStaff(update tgbotapi.Update, bot *tgbotapi.BotAPI, staff *database.Staff){
 	upCQ := update.CallbackQuery
+	fmt.Printf("Handle callback on support bot from staff: %s. From user: %s\n", upCQ.Data, upCQ.Message.Chat.UserName)
 	switch upCQ.Data {
 		case "Menu":
 			StartMenu(upCQ.Message.Chat.ID, bot)

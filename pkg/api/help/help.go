@@ -112,8 +112,8 @@ func ClearMessages(chatID int64, bot *tgbotapi.BotAPI) {
 }
 
 func AddToDelete1(chatID int64, messageID int) {
-	messagesMutex.Lock()
-	defer messagesMutex.Unlock()
+	messagesMutex1.Lock()
+	defer messagesMutex1.Unlock()
 
 	file, err := os.OpenFile(messages1, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {

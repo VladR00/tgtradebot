@@ -67,7 +67,7 @@ func CheckPaymentStatus(bot *tgbotapi.BotAPI, chatID int64, client *cryptobot.Cl
 						fmt.Printf("\nn\\n\n\n\n\n\n\n Error convert: %w", err)
 					}
 					if err = database.UpdateUsersDB(chatID, int64(topup)); err != nil{
-						fmt.Println(err)
+						help.NewMessage(chatID, bot, fmt.Sprintf("Error: %v\n Please contact us. You can find us from menu and click 'Support' button.", err), false)
 					}
 					msg := tgbotapi.NewMessage(chatID, "good")
 					keyboard := tgbotapi.NewInlineKeyboardMarkup(

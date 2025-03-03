@@ -8,21 +8,23 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 var (
-	DBpath = "../storage/sql.db"
+	DBpath 		=	"../storage/sql.db"
+	UserMap 	=	map[int64]User{}
+	StaffMap 	=	map[int64]Staff{}
 )
 
 type User struct{
-	ChatID		int64
-	LinkName	string
-	UserName	string
-	Balance 	int64
-	Time 		string
+	ChatID			int64
+	LinkName		string
+	UserName		string
+	Balance 		int64
+	Time 			string
+	CurrentTicket 	int64
 }
 
 type Staff struct{
 	ChatID			int64
 	Admin			bool	
-	Busy 			bool
 	CurrentTicket 	int64
 	LinkName		string
 	UserName		string
@@ -73,7 +75,6 @@ func CreateTable(table string) error{
 			q = `CREATE TABLE IF NOT EXISTS staff (
 					chat_id INTEGER PRIMARY KEY,
 					admin BOOL,
-					busy BOOL,
 					current_ticket INTEGER,
 					linkname TEXT, 
 					username TEXT,
@@ -87,11 +88,13 @@ func CreateTable(table string) error{
 
 	query, err := db.Prepare(q)
 	if err != nil {
+		fmt.Println(err)
 		return fmt.Errorf("Can't preparing query for creating table %s: %w", table, err)
 	}
 	defer query.Close()
 
 	if _, err = query.Exec(); err != nil{
+		fmt.Println(err)
 		return fmt.Errorf("Can't execute create table %s: %w", table, err)
 	}
 
@@ -120,17 +123,20 @@ func InsertNewUser(chatID int64, linkname string, username string) error{
 func InsertNewStaff(chatID int64, admin bool, linkname string, username string) error{
 	db, err := OpenDB()
 	if err != nil {
+		fmt.Println(err)
 		return err
 	}
 	defer db.Close()
 
-	query, err := db.Prepare("INSERT INTO staff (chat_id, admin, busy, current_ticket, linkname, username, ticket_closed, rating, registration_time) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)")
+	query, err := db.Prepare("INSERT INTO staff (chat_id, admin, current_ticket, linkname, username, ticket_closed, rating, registration_time) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
 	if err != nil {
+		fmt.Println(err)
 		return fmt.Errorf("Can't preparing query for insert new staff into staff: %w", err)
 	}
 	defer query.Close()
 
-	if _, err = query.Exec(chatID, admin, false, 0, linkname, username, 0, 0, time.Now().Unix()); err != nil {
+	if _, err = query.Exec(chatID, admin, 0, linkname, username, 0, 0, time.Now().Unix()); err != nil {
+		fmt.Println(err)
 		return fmt.Errorf("Can't execute inserting new staff into staff: %w", err)
 	}
 	return nil
@@ -173,7 +179,7 @@ func ReadStaffByID(chatID int64) (*Staff, error){
 	var registrationTime int64
 
 	row := db.QueryRow(query, chatID)
-	err = row.Scan(&staff.ChatID, &staff.Admin, &staff.Busy, &staff.CurrentTicket, &staff.LinkName, &staff.UserName, &staff.TicketClosed, &staff.Rating, &registrationTime) 
+	err = row.Scan(&staff.ChatID, &staff.Admin, &staff.CurrentTicket, &staff.LinkName, &staff.UserName, &staff.TicketClosed, &staff.Rating, &registrationTime) 
 	if err != nil {
 		if err == sql.ErrNoRows{
 			return nil, fmt.Errorf("Staff not found while reads staff: %w", err)
