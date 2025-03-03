@@ -25,7 +25,17 @@ func HandleCallBackSwitchForUnauthorizedInTableStaff(update tgbotapi.Update, bot
 		case "Menu":
 			StartMenu(upCQ.Message.Chat.ID, bot)
 		case "initiate":
-			initiate(update, bot)
+			db, err := database.OpenDB()
+			if err != nil {
+				fmt.Println(err)
+				return 
+			}
+			if !database.IsTableExists(db, "staff"){
+				initiate(update, bot)
+			} else {
+				StartMenu(upCQ.Message.Chat.ID, bot)
+			}
+			db.Close()
 	}
 }
 
