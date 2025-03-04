@@ -2,6 +2,7 @@ package supbot
 
 import (
 	"fmt"
+	"time"
 
 	staffbot "tgbottrade/internal/bot_support/bot_staff"
 	database "tgbottrade/internal/database"
@@ -24,18 +25,10 @@ func HandleCallBackSwitchForUnauthorizedInTableStaff(update tgbotapi.Update, bot
 	switch upCQ.Data {
 		case "Menu":
 			StartMenu(upCQ.Message.Chat.ID, bot)
+		case "sup": // map = current ticket... ,create map, create ticket
+
 		case "initiate":
-			db, err := database.OpenDB()
-			if err != nil {
-				fmt.Println(err)
-				return 
-			}
-			if !database.IsTableExists(db, "staff"){
-				initiate(update, bot)
-			} else {
-				StartMenu(upCQ.Message.Chat.ID, bot)
-			}
-			db.Close()
+			initiatebutton(update, bot)
 	}
 }
 
@@ -87,8 +80,33 @@ func initiate(update tgbotapi.Update, bot *tgbotapi.BotAPI){
 		help.NewMessage1(upCQ.Chat.ID, bot, fmt.Sprintf("%v", err), true)
 		fmt.Println(err)
 	}
-	if err := database.InsertNewStaff(upCQ.Chat.ID, true, fmt.Sprintf("@%s",upCQ.Chat.UserName), upCQ.Chat.FirstName); err != nil{
+	staff := database.Staff{
+		ChatID:				upCQ.Chat.ID,
+		Admin:				1,	
+		CurrentTicket: 		0,
+		LinkName:			fmt.Sprintf("@%s",upCQ.Chat.UserName),
+		UserName:			upCQ.Chat.FirstName,
+		TicketClosed:		0,
+		Rating:				0,
+		Time: 		 		time.Now().Unix(),
+	}
+	if err := staff.InsertNew(); err != nil{
 		help.NewMessage1(upCQ.Chat.ID, bot, fmt.Sprintf("Error initiating: %v", err), false)
 	}
 	staffbot.StartMenu(upCQ.Chat.ID, bot)
+}
+
+func initiatebutton(update tgbotapi.Update, bot *tgbotapi.BotAPI){
+	upCQ := update.CallbackQuery 
+	db, err := database.OpenDB()
+	if err != nil {
+		fmt.Println(err)
+		return 
+	}
+	if !database.IsTableExists(db, "staff"){
+		initiate(update, bot)
+	} else {
+		StartMenu(upCQ.Message.Chat.ID, bot)
+	}
+	db.Close()
 }

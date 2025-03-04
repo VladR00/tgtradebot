@@ -3,6 +3,7 @@ package mainbot
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	database "tgbottrade/internal/database"
 	help 	 "tgbottrade/pkg/api/help"
@@ -39,8 +40,18 @@ func HandleCallBackSwitchForMain(update tgbotapi.Update, bot *tgbotapi.BotAPI, c
 
 func StartMenu(upM *tgbotapi.Chat, bot *tgbotapi.BotAPI){
 	chatID := upM.ID
-	if err := database.InsertNewUser(chatID, fmt.Sprintf("@%s",upM.UserName), upM.FirstName); err != nil{
-		fmt.Println(err)
+	if value, _ := database.ReadUserByID(chatID); value == nil {
+		user := database.User{
+			ChatID:			chatID,
+			LinkName:		fmt.Sprintf("@%s",upM.UserName),
+			UserName:		upM.FirstName,
+			Balance:		0,
+			Time:			time.Now().Unix(),
+			CurrentTicket:	0,
+		}	
+		if err := user.InsertNew(); err != nil{
+			fmt.Println(err)
+		}
 	}
 	go help.ClearMessages(chatID, bot)
 	msg := tgbotapi.NewMessage(chatID, "hello muchahos")
@@ -113,7 +124,7 @@ func Profile(chatID int64, bot *tgbotapi.BotAPI){
 		go help.AddToDelete(sent.Chat.ID, sent.MessageID)
 		return
 	}
-	msg := tgbotapi.NewMessage(chatID, fmt.Sprintf("ID: %d\nLinkname: %s\nUsername: %s\nBalance: %d\nRegistration Time: %s", user.ChatID, user.LinkName, user.UserName, user.Balance, user.Time))
+	msg := tgbotapi.NewMessage(chatID, fmt.Sprintf("ID: %d\nLinkname: %s\nUsername: %s\nBalance: %d\nRegistration Time: %s", user.ChatID, user.LinkName, user.UserName, user.Balance, time.Unix(user.Time, 0).Format("2006-01-02 15:04")))
 		keyboard := tgbotapi.NewInlineKeyboardMarkup(
 			tgbotapi.NewInlineKeyboardRow(
 				tgbotapi.NewInlineKeyboardButtonData("Top Up", "Services"),

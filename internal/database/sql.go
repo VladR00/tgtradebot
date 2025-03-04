@@ -3,7 +3,6 @@ package database
 import (
 	"database/sql"
 	"fmt"
-	"time"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -18,19 +17,19 @@ type User struct{
 	LinkName		string
 	UserName		string
 	Balance 		int64
-	Time 			string
+	Time 			int64
 	CurrentTicket 	int64
 }
 
 type Staff struct{
 	ChatID			int64
-	Admin			bool	
+	Admin			int32	
 	CurrentTicket 	int64
 	LinkName		string
 	UserName		string
 	TicketClosed	int64
 	Rating 			int64
-	Time 			string
+	Time 			int64
 }
 
 func IsTableExists(db *sql.DB, tableName string) bool {
@@ -70,6 +69,7 @@ func CreateTable(table string) error{
 					linkname TEXT, 
 					username TEXT,
 					balance DECIMAL(15,2),
+					current_ticket INTEGER,
 					registration_time INTEGER)`
 		case "staff":
 			q = `CREATE TABLE IF NOT EXISTS staff (
@@ -101,26 +101,26 @@ func CreateTable(table string) error{
 	return nil
 }
 
-func InsertNewUser(chatID int64, linkname string, username string) error{
+func (s *User) InsertNew() error{
 	db, err := OpenDB()
 	if err != nil {
 		return err
 	}
 	defer db.Close()
 
-	query, err := db.Prepare("INSERT INTO users (chat_id, linkname, username, balance, registration_time) VALUES (?, ?, ?, ?, ?)")
+	query, err := db.Prepare("INSERT INTO users (chat_id, linkname, username, balance, current_ticket, registration_time) VALUES (?, ?, ?, ?, ? ,?)")
 	if err != nil {
 		return fmt.Errorf("Can't preparing query for insert new users into users: %w", err)
 	}
 	defer query.Close()
 
-	if _, err = query.Exec(chatID, linkname, username, 0, time.Now().Unix()); err != nil {
+	if _, err = query.Exec(s.ChatID, s.LinkName, s.UserName, s.Balance, s.CurrentTicket, s.Time); err != nil { 
 		return fmt.Errorf("Can't execute inserting new users into users: %w", err)
 	}
 	return nil
 }
 
-func InsertNewStaff(chatID int64, admin bool, linkname string, username string) error{
+func (s *Staff) InsertNew() error{
 	db, err := OpenDB()
 	if err != nil {
 		fmt.Println(err)
@@ -128,18 +128,58 @@ func InsertNewStaff(chatID int64, admin bool, linkname string, username string) 
 	}
 	defer db.Close()
 
-	query, err := db.Prepare("INSERT INTO staff (chat_id, admin, current_ticket, linkname, username, ticket_closed, rating, registration_time) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
+	query, err := db.Prepare("INSERT INTO staff (chat_id, admin, linkname, username, current_ticket, ticket_closed, rating, registration_time) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
 	if err != nil {
 		fmt.Println(err)
 		return fmt.Errorf("Can't preparing query for insert new staff into staff: %w", err)
 	}
 	defer query.Close()
 
-	if _, err = query.Exec(chatID, admin, 0, linkname, username, 0, 0, time.Now().Unix()); err != nil {
+	if _, err = query.Exec(s.ChatID, s.Admin, s.LinkName, s.UserName, s.CurrentTicket, s.TicketClosed, s.Rating, s.Time); err != nil { 
 		fmt.Println(err)
 		return fmt.Errorf("Can't execute inserting new staff into staff: %w", err)
 	}
 	return nil
+}
+
+func (s *User) Update() error{
+	db, err := OpenDB()
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+
+	query := (`UPDATE users 
+			   SET balance = ?, current_ticket = ?
+			   WHERE chat_id = ?`)
+
+	result, err := db.Exec(query, s.Balance, s.CurrentTicket, s.ChatID)
+	if err != nil {
+		return fmt.Errorf("Can't update balance from users: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected() 
+	if err != nil {
+		return fmt.Errorf("Can't update balance from users while checking RowsAffected: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("ChatID: %d; Isn't updated, user not found (maybe).", s.ChatID)
+	}
+
+	return nil
+}
+func (s *Staff) MapUpdateOrCreate() {
+	StaffMap[s.ChatID] = *s															
+}
+func (s *User) MapUpdateOrCreate() {
+	UserMap[s.ChatID] = *s
+}
+func (s *Staff) MapDelete() {
+	delete(StaffMap, s.ChatID)														
+}
+func (s *User) MapDelete() {
+	delete(UserMap, s.ChatID)	
 }
 
 func ReadUserByID(chatID int64) (*User, error){
@@ -152,18 +192,16 @@ func ReadUserByID(chatID int64) (*User, error){
 	query := ("SELECT * FROM users WHERE chat_id = ?")
 
 	user := &User{}
-	var registrationTime int64
 
 	row := db.QueryRow(query, chatID)
-	err = row.Scan(&user.ChatID, &user.LinkName, &user.UserName, &user.Balance, &registrationTime) 
+	err = row.Scan(&user.ChatID, &user.LinkName, &user.UserName, &user.Balance, &user.CurrentTicket, &user.Time) 
 	if err != nil {
 		if err == sql.ErrNoRows{
 			return nil, fmt.Errorf("User not found while reads user: %w", err)
 		}
 		return nil, fmt.Errorf("Undefined error while reads user: %w", err)
 	}
-	user.Time = time.Unix(registrationTime, 0).Format("2006-01-02 15:04")
-	return user, nil
+	return user, nil 
 }
 
 func ReadStaffByID(chatID int64) (*Staff, error){
@@ -176,42 +214,14 @@ func ReadStaffByID(chatID int64) (*Staff, error){
 	query := ("SELECT * FROM staff WHERE chat_id = ?")
 
 	staff := &Staff{}
-	var registrationTime int64
 
 	row := db.QueryRow(query, chatID)
-	err = row.Scan(&staff.ChatID, &staff.Admin, &staff.CurrentTicket, &staff.LinkName, &staff.UserName, &staff.TicketClosed, &staff.Rating, &registrationTime) 
+	err = row.Scan(&staff.ChatID, &staff.Admin, &staff.CurrentTicket, &staff.LinkName, &staff.UserName, &staff.TicketClosed, &staff.Rating, &staff.Time) 
 	if err != nil {
 		if err == sql.ErrNoRows{
 			return nil, fmt.Errorf("Staff not found while reads staff: %w", err)
 		}
 		return nil, fmt.Errorf("Undefined error while reads staff: %w", err)
 	}
-	staff.Time = time.Unix(registrationTime, 0).Format("2006-01-02 15:04")
-	return staff, nil
-}
-
-func UpdateUsersDB(chatID int64, topUp int64) error{
-	db, err := OpenDB()
-	if err != nil {
-		return err
-	}
-	defer db.Close()
-
-	query := ("UPDATE users SET balance = balance + ? WHERE chat_id = ?")
-
-	result, err := db.Exec(query, topUp, chatID)
-	if err != nil {
-		return fmt.Errorf("Can't update balance from users: %w", err)
-	}
-
-	rowsAffected, err := result.RowsAffected() 
-	if err != nil {
-		return fmt.Errorf("Can't update balance from users while checking RowsAffected: %w", err)
-	}
-
-	if rowsAffected == 0 {
-		return fmt.Errorf("ChatID: %d; Isn't updated, user not found (maybe).", chatID)
-	}
-
-	return nil
+	return staff, nil //staff.Time = time.Unix(registrationTime, 0).Format("2006-01-02 15:04")
 }

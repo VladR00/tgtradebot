@@ -64,10 +64,14 @@ func CheckPaymentStatus(bot *tgbotapi.BotAPI, chatID int64, client *cryptobot.Cl
 					go help.ClearMessages(chatID, bot)
 					topup, err := strconv.Atoi(invoice.Amount)
 					if err != nil {
-						fmt.Printf("\nn\\n\n\n\n\n\n\n Error convert: %w", err)
+						fmt.Printf("Error convert: %w\n", err)
 					}
-					if err = database.UpdateUsersDB(chatID, int64(topup)); err != nil{
-						help.NewMessage(chatID, bot, fmt.Sprintf("Error: %v\n Please contact us. You can find us from menu and click 'Support' button.", err), false)
+					user, _ := database.ReadUserByID(chatID)
+					if user != nil{
+						user.Balance = user.Balance + int64(topup)
+						if err := user.Update(); err != nil{
+							help.NewMessage(chatID, bot, fmt.Sprintf("Error update balance (+%d). Contact us with forward this message.\nError: %v", int64(topup), err), false)
+						}
 					}
 					msg := tgbotapi.NewMessage(chatID, "good")
 					keyboard := tgbotapi.NewInlineKeyboardMarkup(
