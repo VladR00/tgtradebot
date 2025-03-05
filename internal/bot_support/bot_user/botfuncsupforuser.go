@@ -3,6 +3,7 @@ package supbot
 import (
 	"fmt"
 	"time"
+	"strings"
 
 	staffbot "tgbottrade/internal/bot_support/bot_staff"
 	database "tgbottrade/internal/database"
@@ -13,6 +14,31 @@ import (
 func HandleMessageSwitchForUnauthorizedInTableStaff(update tgbotapi.Update, bot *tgbotapi.BotAPI){
 	upM := update.Message
 	fmt.Printf("Handle message on support bot from UnAuthorized: %s. From user: %s\n", upM.Text, upM.Chat.UserName)
+	
+	if value, exists := database.UserMap[upM.Chat.ID]; exists{
+		if value.UserName == "............................................................................."{
+			value.UserName = upM.Text
+			value.CurrentTicket = 0
+			value.MapUpdateOrCreate()
+			CreateTicket(value, bot)
+		} else if (value.CurrentTicket != 0){
+			message := database.TicketMessage{
+				TicketID:	value.CurrentTicket,
+				Support:	0,
+				ChatID:		value.ChatID,
+				UserName:	value.UserName,
+				MessageID:	upM.MessageID,
+				Time:		time.Now().Unix(),		
+			}
+			if err := message.InsertNew(); err != nil{
+				fmt.Println(err)
+				help.NewMessage(value.ChatID, bot, fmt.Sprintf("%v", err),false)
+				return
+			}
+
+			go staffbot.NotificateSups(value, bot)
+		}
+	}
 	switch upM.Text {
 		case "/start":
 			StartMenu(upM.Chat.ID, bot)
@@ -22,14 +48,37 @@ func HandleMessageSwitchForUnauthorizedInTableStaff(update tgbotapi.Update, bot 
 func HandleCallBackSwitchForUnauthorizedInTableStaff(update tgbotapi.Update, bot *tgbotapi.BotAPI){
 	upCQ := update.CallbackQuery 
 	fmt.Printf("Handle callback on support bot from UnAuthorized: %s. From user: %s\n", upCQ.Data, upCQ.Message.Chat.UserName)
-	switch upCQ.Data {
-		case "Menu":
-			StartMenu(upCQ.Message.Chat.ID, bot)
-		case "sup": // map = current ticket... ,create map, create ticket
-
-		case "initiate":
+	switch {
+		case strings.HasPrefix(upCQ.Data, "Language"):
+			CreateTicketName(upCQ.Message.Chat.ID, bot, strings.TrimPrefix(upCQ.Data, "Language"))
+		case upCQ.Data == "CreateTicketButton": 
+			CreateTicketButton(upCQ.Message.Chat.ID, bot)			
+		case upCQ.Data == "initiate":
 			initiatebutton(update, bot)
 	}
+}
+
+func CreateTicketName(chatID int64, bot *tgbotapi.BotAPI, language string){
+	go help.ClearMessages1(chatID, bot)
+	var m string
+	switch language{
+		case "RU":
+			m = "Напишите как к Вам обращаться"
+		case "ENG":
+			m = "Write how to address you"
+	}
+	user, err := database.ReadUserByID(chatID)
+	if user == nil {
+		help.NewMessage(chatID, bot, fmt.Sprintf("%v",err), true)
+		return
+	}
+	user.UserName = "............................................................................."
+	user.Language = language
+	user.CurrentTicket = 0
+	user.MapUpdateOrCreate()
+	help.NewMessage(chatID, bot, m, true)
+	
+	//go help.AddToDelete1(sent.Chat.ID, sent.MessageID)
 }
 
 func StartMenu(chatID int64, bot *tgbotapi.BotAPI){
@@ -38,7 +87,10 @@ func StartMenu(chatID int64, bot *tgbotapi.BotAPI){
 	msg := tgbotapi.NewMessage(chatID, "пользователь")
 
 	defaultKeyboard = [][]tgbotapi.InlineKeyboardButton{
-		{tgbotapi.NewInlineKeyboardButtonData("menu", "Menu")},
+		{
+			tgbotapi.NewInlineKeyboardButtonData("menu", "Menu"),
+			tgbotapi.NewInlineKeyboardButtonData("createticket", "CreateTicketButton"),
+		}, 
 	}
 
 	initiaterow := []tgbotapi.InlineKeyboardButton{
@@ -68,34 +120,6 @@ func StartMenu(chatID int64, bot *tgbotapi.BotAPI){
 	go help.AddToDelete1(sent.Chat.ID, sent.MessageID)	
 }
 
-func initiate(update tgbotapi.Update, bot *tgbotapi.BotAPI){
-	upCQ := update.CallbackQuery.Message
-	db, err := database.OpenDB()
-	if err != nil {
-		fmt.Println(err)
-		return 
-	}
-	defer db.Close()
-	if err = database.CreateTable("staff"); err != nil {
-		help.NewMessage1(upCQ.Chat.ID, bot, fmt.Sprintf("%v", err), true)
-		fmt.Println(err)
-	}
-	staff := database.Staff{
-		ChatID:				upCQ.Chat.ID,
-		Admin:				1,	
-		CurrentTicket: 		0,
-		LinkName:			fmt.Sprintf("@%s",upCQ.Chat.UserName),
-		UserName:			upCQ.Chat.FirstName,
-		TicketClosed:		0,
-		Rating:				0,
-		Time: 		 		time.Now().Unix(),
-	}
-	if err := staff.InsertNew(); err != nil{
-		help.NewMessage1(upCQ.Chat.ID, bot, fmt.Sprintf("Error initiating: %v", err), false)
-	}
-	staffbot.StartMenu(upCQ.Chat.ID, bot)
-}
-
 func initiatebutton(update tgbotapi.Update, bot *tgbotapi.BotAPI){
 	upCQ := update.CallbackQuery 
 	db, err := database.OpenDB()
@@ -104,9 +128,101 @@ func initiatebutton(update tgbotapi.Update, bot *tgbotapi.BotAPI){
 		return 
 	}
 	if !database.IsTableExists(db, "staff"){
-		initiate(update, bot)
+		upCQ := update.CallbackQuery.Message
+		if err = database.CreateTable("staff"); err != nil {
+			fmt.Println(err)
+			help.NewMessage1(upCQ.Chat.ID, bot, fmt.Sprintf("%v", err), true)
+		}
+		staff := database.Staff{
+			ChatID:				upCQ.Chat.ID,
+			Admin:				1,	
+			CurrentTicket: 		0,
+			LinkName:			fmt.Sprintf("@%s",upCQ.Chat.UserName),
+			UserName:			upCQ.Chat.FirstName,
+			TicketClosed:		0,
+			Rating:				0,
+			Time: 		 		time.Now().Unix(),
+		}
+		if err := staff.InsertNew(); err != nil{
+			help.NewMessage1(upCQ.Chat.ID, bot, fmt.Sprintf("Error initiating: %v", err), false)
+		}
+		staffbot.StartMenu(upCQ.Chat.ID, bot)
 	} else {
 		StartMenu(upCQ.Message.Chat.ID, bot)
 	}
 	db.Close()
+}
+
+func CreateTicketButton(chatID int64, bot *tgbotapi.BotAPI){
+	go help.ClearMessages1(chatID, bot)
+
+	msg := tgbotapi.NewMessage(chatID, "Choose prefered language")
+	keyboard := tgbotapi.NewInlineKeyboardMarkup(
+		tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonData("Russian", "LanguageRU"),
+			tgbotapi.NewInlineKeyboardButtonData("English", "LanguageENG"),
+		),
+	)
+	msg.ReplyMarkup = keyboard
+	sent, err := bot.Send(msg)
+	if err != nil {
+		fmt.Println("Error sending start menu: ", err)
+	}
+	go help.AddToDelete1(sent.Chat.ID, sent.MessageID)
+}
+func CreateTicket(user database.User, bot *tgbotapi.BotAPI){
+	ticketcr := database.Ticket{
+		ChatID:			user.ChatID,
+		SupChatID:		0,
+		LinkName:		user.LinkName,
+		SupLinkName:	"0",
+		UserName:		user.UserName,
+		SupUserName:	"0",
+		Time: 			time.Now().Unix(),
+		ClosingTime: 	0,
+		Language:		user.Language,
+		Status:			"Open",
+	}
+	if err := ticketcr.InsertNew(); err != nil{
+		fmt.Println(err)
+		help.NewMessage(user.ChatID, bot, fmt.Sprintf("%v", err), false)
+		StartMenu(user.ChatID, bot)
+		return
+	}
+	ticket, err := database.ReadOpenTicketByUserID(user.ChatID)
+	if err != nil {
+		fmt.Println(err)
+		help.NewMessage(user.ChatID, bot, fmt.Sprintf("%v",err), false)
+		return
+	}
+	user.CurrentTicket = ticket.TicketID
+	user.MapUpdateOrCreate()
+	if err = user.Update(); err != nil {
+		fmt.Println(err)
+		help.NewMessage(user.ChatID, bot, fmt.Sprintf("%v",err), false)
+		return
+	}
+
+	go help.ClearMessages1(user.ChatID, bot)
+
+	var m string
+	switch ticket.Language{
+		case "RU":
+			m = "Тикет открыт, Вы можете задать свой вопрос."
+		case "ENG":
+			m = "Ticket is open, You can ask."
+	}
+
+	msg := tgbotapi.NewMessage(user.ChatID, m)
+	keyboard := tgbotapi.NewInlineKeyboardMarkup(
+		tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonData("Close ticket", "TicketClose"),
+		),
+	)
+	msg.ReplyMarkup = keyboard
+	sent, err := bot.Send(msg)
+	if err != nil {
+		fmt.Println("Error sending start menu: ", err)
+	}
+	go help.AddToDelete1(sent.Chat.ID, sent.MessageID)
 }

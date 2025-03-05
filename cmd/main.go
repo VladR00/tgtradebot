@@ -35,7 +35,14 @@ func main() {
 		fmt.Println(err)
 		return
 	}
-
+	if err = database.CreateTable("tickets"); err != nil {
+		fmt.Println(err)
+		return
+	}
+	if err = database.CreateTable("tickets_messages"); err != nil {
+		fmt.Println(err)
+		return
+	}
 	botmain, err := tgbotapi.NewBotAPI(config.TelegramBotToken)
 	if err != nil {
 		log.Fatalf("Error creating bot: %v", err)
