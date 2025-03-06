@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 	"strconv"
+	"time"
 
 	database "tgbottrade/internal/database"
 	help 	 "tgbottrade/pkg/api/help"
@@ -117,6 +118,20 @@ func AcceptTicket(chatID int64, bot *tgbotapi.BotAPI, ticketid string){
 		fmt.Println(err)
 		return
 	}
+	go help.ClearMessages1(chatID, bot)
+	msg := tgbotapi.NewMessage(staff.ChatID, fmt.Sprintf("Ticket info\nID: %d\nUsername: %s\nPrefered language: %s\nOpen time: %s", ticket.TicketID, ticket.UserName, ticket.Language, time.Unix(ticket.Time, 0).Format("2006-01-02 15:04")))
+		keyboard := tgbotapi.NewInlineKeyboardMarkup(
+			tgbotapi.NewInlineKeyboardRow(
+				tgbotapi.NewInlineKeyboardButtonData("Close", fmt.Sprintf("Close%d",ticket.TicketID)),
+				tgbotapi.NewInlineKeyboardButtonData("Turn aside", fmt.Sprintf("Turn aside%d",ticket.TicketID)),
+			),
+		)
+	msg.ReplyMarkup = keyboard
+	sent, err := bot.Send(msg)
+	if err != nil {
+		fmt.Println("Error sending start menu: ", err)
+	}
+	go help.AddToDelete1(sent.Chat.ID, sent.MessageID)
 	SendAllMessages(messages, ticket, bot)
 }
 func SendAllMessages(messages []*database.TicketMessage, ticket database.Ticket, bot *tgbotapi.BotAPI){
