@@ -35,8 +35,31 @@ func HandleMessageSwitchForUnauthorizedInTableStaff(update tgbotapi.Update, bot 
 				help.NewMessage(value.ChatID, bot, fmt.Sprintf("%v", err),false)
 				return
 			}
+			ticket, err := database.ReadTicketByID(value.CurrentTicket)
+			if err != nil {
+				fmt.Println(err)
+				help.NewMessage(value.ChatID, bot, fmt.Sprintf("%v", err),false)
+				return
+			}
+			if ticket.SupChatID == 0 && ticket.Status == "Notificate"{
+				fmt.Println("notificate:")
+				go staffbot.NotificateSups(value, bot)
+			} else {
+				msg := tgbotapi.NewMessage(ticket.SupChatID, fmt.Sprintf("User %s send message by ticket %d, prefered language: %s", ticket.UserName, ticket.TicketID, ticket.Language))
+				keyboard := tgbotapi.NewInlineKeyboardMarkup(
+					tgbotapi.NewInlineKeyboardRow(
+						tgbotapi.NewInlineKeyboardButtonData("Communicate", fmt.Sprintf("Move%d",ticket.TicketID)),
+					),
+				)
+				msg.ReplyMarkup = keyboard
+				sent, err := bot.Send(msg)
+				if err != nil {
+					fmt.Println("SupChatID:", ticket.SupChatID)
 
-			go staffbot.NotificateSups(value, bot)
+					fmt.Println("Error sending start menu: ", err)
+				}
+				go help.AddToDelete1(ticket.SupChatID, sent.MessageID)
+			}
 		}
 	}
 	switch upM.Text {
@@ -60,13 +83,6 @@ func HandleCallBackSwitchForUnauthorizedInTableStaff(update tgbotapi.Update, bot
 
 func CreateTicketName(chatID int64, bot *tgbotapi.BotAPI, language string){
 	go help.ClearMessages1(chatID, bot)
-	var m string
-	switch language{
-		case "RU":
-			m = "Напишите как к Вам обращаться"
-		case "ENG":
-			m = "Write how to address you"
-	}
 	user, err := database.ReadUserByID(chatID)
 	if user == nil {
 		help.NewMessage(chatID, bot, fmt.Sprintf("%v",err), true)
@@ -76,7 +92,7 @@ func CreateTicketName(chatID int64, bot *tgbotapi.BotAPI, language string){
 	user.Language = language
 	user.CurrentTicket = 0
 	user.MapUpdateOrCreate()
-	help.NewMessage(chatID, bot, m, true)
+	help.NewMessage(chatID, bot, "Write how to address you", true)
 	
 	//go help.AddToDelete1(sent.Chat.ID, sent.MessageID)
 }
@@ -175,13 +191,13 @@ func CreateTicket(user database.User, bot *tgbotapi.BotAPI){
 		ChatID:			user.ChatID,
 		SupChatID:		0,
 		LinkName:		user.LinkName,
-		SupLinkName:	"0",
+		SupLinkName:	"asd",
 		UserName:		user.UserName,
-		SupUserName:	"0",
+		SupUserName:	"asd",
 		Time: 			time.Now().Unix(),
 		ClosingTime: 	0,
 		Language:		user.Language,
-		Status:			"Open",
+		Status:			"Notificate",
 	}
 	if err := ticketcr.InsertNew(); err != nil{
 		fmt.Println(err)
@@ -205,15 +221,7 @@ func CreateTicket(user database.User, bot *tgbotapi.BotAPI){
 
 	go help.ClearMessages1(user.ChatID, bot)
 
-	var m string
-	switch ticket.Language{
-		case "RU":
-			m = "Тикет открыт, Вы можете задать свой вопрос."
-		case "ENG":
-			m = "Ticket is open, You can ask."
-	}
-
-	msg := tgbotapi.NewMessage(user.ChatID, m)
+	msg := tgbotapi.NewMessage(user.ChatID, "Ticket is open, You can ask.")
 	keyboard := tgbotapi.NewInlineKeyboardMarkup(
 		tgbotapi.NewInlineKeyboardRow(
 			tgbotapi.NewInlineKeyboardButtonData("Close ticket", "TicketClose"),

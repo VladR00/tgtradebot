@@ -206,10 +206,12 @@ func (s *Ticket) InsertNew() error{
 	}
 	defer query.Close()
 
-	if _, err = query.Exec(s.ChatID, s.SupChatID, s.LinkName, s.SupLinkName, s.UserName, s.SupUserName, s.Time, s.ClosingTime, s.Language, s.Status); err != nil { 
+	r, err := query.Exec(s.ChatID, s.SupChatID, s.LinkName, s.SupLinkName, s.UserName, s.SupUserName, s.Time, s.ClosingTime, s.Language, s.Status)
+	if err != nil { 
 		fmt.Println(err)
 		return fmt.Errorf("Can't execute inserting new ticket into tickets: %w", err)
 	}
+	fmt.Println(r.RowsAffected())
 	return nil
 }
 
@@ -301,7 +303,7 @@ func (s *Ticket) Update() error{ //by ID
 			   SET sup_chat_id = ?, sup_linkname = ?,sup_username = ?, closing_time = ?, status = ?
 			   WHERE id = ?`)
 
-	result, err := db.Exec(query, s.SupChatID, s.SupLinkName, s.SupUserName, s.ClosingTime, s.Status)
+	result, err := db.Exec(query, s.SupChatID, s.SupLinkName, s.SupUserName, s.ClosingTime, s.Status, s.TicketID)
 	if err != nil {
 		return fmt.Errorf("Can't update ticket from tickets: %w", err)
 	}
@@ -342,18 +344,29 @@ func ReadTicketByID(ticketID int64) (*Ticket, error){
 	}
 	defer db.Close()
 
-	query := (`SELECT * FROM tickets
-			   WHERE id = ?`)
+	query := (`SELECT id, registration_time, closing_time, chat_id, sup_chat_id, linkname, username, sup_linkname, sup_username, prefered_language, status 
+              FROM tickets WHERE id = ?`)
 	
 	ticket := &Ticket{}
 	
 	row := db.QueryRow(query, ticketID)
-	err = row.Scan(&ticket.TicketID, &ticket.ChatID, &ticket.SupChatID, &ticket.LinkName, &ticket.SupLinkName, &ticket.UserName, &ticket.SupUserName, &ticket.Time, &ticket.ClosingTime, &ticket.Language, &ticket.Status)
+	err = row.Scan(
+		&ticket.TicketID, 
+		&ticket.Time, 
+		&ticket.ClosingTime, 
+		&ticket.ChatID, 
+		&ticket.SupChatID, 
+		&ticket.LinkName, 
+		&ticket.UserName, 
+		&ticket.SupLinkName, 
+		&ticket.SupUserName, 
+		&ticket.Language, 
+		&ticket.Status,)
 	if err != nil {
 		if err == sql.ErrNoRows{
-			return nil, fmt.Errorf("Ticket not found while reads tickets: %w", err)
+			return nil, fmt.Errorf("Ticket not found while reads tickets ReadTicketByID: %w", err)
 		}
-		return nil, fmt.Errorf("Undefined error while reads tickets: %w", err)
+		return nil, fmt.Errorf("Undefined error while reads tickets ReadTicketByID: %w", err)
 	}
 	return ticket, nil 
 }
@@ -365,18 +378,29 @@ func ReadOpenTicketByUserID(chatID int64) (*Ticket, error){
 	}
 	defer db.Close()
 
-	query := (`SELECT * FROM tickets
-			   WHERE chat_id = ? AND status = ?`)
+	query := (`SELECT id, registration_time, closing_time, chat_id, sup_chat_id, linkname, username, sup_linkname, sup_username, prefered_language, status 
+              FROM tickets WHERE chat_id = ? AND status != ?`)
 	
 	ticket := &Ticket{}
 	
-	row := db.QueryRow(query, chatID, "Open")
-	err = row.Scan(&ticket.TicketID, &ticket.ChatID, &ticket.SupChatID, &ticket.LinkName, &ticket.SupLinkName, &ticket.UserName, &ticket.SupUserName, &ticket.Time, &ticket.ClosingTime, &ticket.Language, &ticket.Status)
+	row := db.QueryRow(query, chatID, "Closed")
+	err = row.Scan(
+		&ticket.TicketID, 
+		&ticket.Time, 
+		&ticket.ClosingTime, 
+		&ticket.ChatID, 
+		&ticket.SupChatID, 
+		&ticket.LinkName, 
+		&ticket.UserName, 
+		&ticket.SupLinkName, 
+		&ticket.SupUserName, 
+		&ticket.Language, 
+		&ticket.Status,)
 	if err != nil {
 		if err == sql.ErrNoRows{
-			return nil, fmt.Errorf("Ticket not found while reads tickets: %w", err)
+			return nil, fmt.Errorf("Ticket not found while reads tickets ReadOpenTicketByUserID: %w", err)
 		}
-		return nil, fmt.Errorf("Undefined error while reads tickets: %w", err)
+		return nil, fmt.Errorf("Undefined error while reads tickets ReadOpenTicketByUserID: %w", err)
 	}
 	return ticket, nil 
 }

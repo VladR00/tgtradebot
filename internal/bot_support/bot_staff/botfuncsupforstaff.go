@@ -53,7 +53,7 @@ func NotificateSups(user database.User, bot *tgbotapi.BotAPI){
 		return
 	} 
 	for _, staff := range stafflist{
-		msg := tgbotapi.NewMessage(staff.ChatID, fmt.Sprintf("New ticket with ID: %d\nUsername: %s\n", user.CurrentTicket, user.UserName))
+		msg := tgbotapi.NewMessage(staff.ChatID, fmt.Sprintf("New ticket with ID: %d\nUsername: %s\nPrefered language: %s\n", user.CurrentTicket, user.UserName, user.Language))
 		keyboard := tgbotapi.NewInlineKeyboardMarkup(
 			tgbotapi.NewInlineKeyboardRow(
 				tgbotapi.NewInlineKeyboardButtonData("Accept", fmt.Sprintf("Accept%d",user.CurrentTicket)),
@@ -65,6 +65,16 @@ func NotificateSups(user database.User, bot *tgbotapi.BotAPI){
 			fmt.Println("Error sending start menu: ", err)
 		}
 		go help.AddToDelete1(sent.Chat.ID, sent.MessageID)
+	}
+	ticket, err := database.ReadTicketByID(user.CurrentTicket)
+	if err != nil {
+		fmt.Println(err)
+	}
+	ticket.Status = "Open"
+	fmt.Println(ticket)
+	err = ticket.Update()
+	if err != nil {
+		fmt.Println(err)
 	}
 }
 
@@ -111,7 +121,11 @@ func AcceptTicket(chatID int64, bot *tgbotapi.BotAPI, ticketid string){
 }
 func SendAllMessages(messages []*database.TicketMessage, ticket database.Ticket, bot *tgbotapi.BotAPI){
 	for _, message := range messages{
-		msg := tgbotapi.NewCopyMessage(ticket.SupChatID, message.ChatID, int(message.MessageID))
-		bot.Send(msg)
+		msg := tgbotapi.NewCopyMessage(ticket.SupChatID, message.ChatID, message.MessageID)
+		sent, err := bot.Send(msg)
+		if err != nil {
+			fmt.Println("Error sending: ", err)
+		}
+		go help.AddToDelete1(ticket.SupChatID, sent.MessageID)
 	}
 }
