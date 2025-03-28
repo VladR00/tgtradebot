@@ -28,6 +28,8 @@ func HandleCallBackSwitchForAuthorizedInTableStaff(update tgbotapi.Update, bot *
 			AcceptTicket(upCQ.Message.Chat.ID, bot, strings.TrimPrefix(upCQ.Data, "Accept"))
 		case upCQ.Data == "Menu":
 			StartMenu(upCQ.Message.Chat.ID, bot)
+		case strings.HasPrefix(upCQ.Data, "Close"):
+			CloseTicket(upCQ.Message.Chat.ID, bot, strings.TrimPrefix(upCQ.Data, "Close"))
 	}
 }	
 
@@ -143,4 +145,54 @@ func SendAllMessages(messages []*database.TicketMessage, ticket database.Ticket,
 		}
 		go help.AddToDelete1(ticket.SupChatID, sent.MessageID)
 	}
+}
+func CloseTicket(chatID int64, bot *tgbotapi.BotAPI, ticketid string){
+	t, _ := strconv.ParseInt(ticketid, 10, 64)
+	ticketcr, err := database.ReadTicketByID(t)
+	if err != nil{
+		fmt.Println(err)
+		return
+	}
+	staff, err := database.ReadStaffByID(chatID)
+	if err != nil{
+		fmt.Println(err)
+		return
+	}
+	ticket := database.Ticket{
+		TicketID:		ticketcr.TicketID,
+		ChatID:			ticketcr.ChatID,
+		SupChatID:		ticketcr.SupChatID,
+		LinkName:		ticketcr.LinkName,
+		SupLinkName:	ticketcr.SupLinkName,
+		UserName:		ticketcr.UserName,
+		SupUserName:	ticketcr.SupUserName,
+		Time: 			ticketcr.Time,
+		ClosingTime: 	time.Now().Unix(),
+		Language:		ticketcr.Language,
+		Status:			"Closed",
+	}
+	staff.TicketClosed++
+	staff.CurrentTicket = 0
+	ticket.Update()
+	staff.MapUpdateOrCreate()
+	staff.Update()
+	if value, exists := database.UserMap[ticket.ChatID]; exists{
+		value.CurrentTicket = 0 
+		value.MapUpdateOrCreate()
+		msg := tgbotapi.NewMessage(ticket.ChatID, fmt.Sprintf("Your ticket with ID: %d is closed", ticket.TicketID))
+		keyboard := tgbotapi.NewInlineKeyboardMarkup(
+			tgbotapi.NewInlineKeyboardRow(
+				tgbotapi.NewInlineKeyboardButtonData("Menu", "Menu"),
+			),
+		)
+		msg.ReplyMarkup = keyboard
+		sent, err := bot.Send(msg)
+		if err != nil {
+			fmt.Println("Error sending start menu: ", err)
+		} else {
+			go help.AddToDelete1(sent.Chat.ID, sent.MessageID)
+		}
+	}
+	go help.ClearMessages1(chatID, bot)
+	StartMenu(chatID, bot)
 }

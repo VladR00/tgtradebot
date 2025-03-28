@@ -78,6 +78,8 @@ func HandleCallBackSwitchForUnauthorizedInTableStaff(update tgbotapi.Update, bot
 			CreateTicketButton(upCQ.Message.Chat.ID, bot)			
 		case upCQ.Data == "initiate":
 			initiatebutton(update, bot)
+		case upCQ.Data == "Menu":
+			StartMenu(upCQ.Message.Chat.ID, bot)
 	}
 }
 
