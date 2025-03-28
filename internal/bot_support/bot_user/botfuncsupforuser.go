@@ -45,20 +45,35 @@ func HandleMessageSwitchForUnauthorizedInTableStaff(update tgbotapi.Update, bot 
 				fmt.Println("notificate:")
 				go staffbot.NotificateSups(value, bot)
 			} else {
-				msg := tgbotapi.NewMessage(ticket.SupChatID, fmt.Sprintf("User %s send message by ticket %d, prefered language: %s", ticket.UserName, ticket.TicketID, ticket.Language))
-				keyboard := tgbotapi.NewInlineKeyboardMarkup(
-					tgbotapi.NewInlineKeyboardRow(
-						tgbotapi.NewInlineKeyboardButtonData("Communicate", fmt.Sprintf("Move%d",ticket.TicketID)),
-					),
-				)
-				msg.ReplyMarkup = keyboard
-				sent, err := bot.Send(msg)
-				if err != nil {
-					fmt.Println("SupChatID:", ticket.SupChatID)
-
-					fmt.Println("Error sending start menu: ", err)
+				staff, err := database.ReadStaffByID(ticket.SupChatID)
+				if err != nil{
+					fmt.Println(err)
+					return
 				}
-				go help.AddToDelete1(ticket.SupChatID, sent.MessageID)
+				if (value.CurrentTicket == staff.CurrentTicket){
+					msg := tgbotapi.NewCopyMessage(staff.ChatID, message.ChatID, message.MessageID)
+					sent, err := bot.Send(msg)
+					if err != nil {
+						fmt.Println("Error sending: ", err)
+					} else {
+						go help.AddToDelete1(ticket.SupChatID, sent.MessageID)
+					}
+				} else {
+					msg := tgbotapi.NewMessage(ticket.SupChatID, fmt.Sprintf("User %s send message by ticket %d, prefered language: %s", ticket.UserName, ticket.TicketID, ticket.Language))
+					keyboard := tgbotapi.NewInlineKeyboardMarkup(
+						tgbotapi.NewInlineKeyboardRow(
+							tgbotapi.NewInlineKeyboardButtonData("Communicate", fmt.Sprintf("Move%d",ticket.TicketID)),
+						),
+					)
+					msg.ReplyMarkup = keyboard
+					sent, err := bot.Send(msg)
+					if err != nil {
+						fmt.Println("SupChatID:", ticket.SupChatID)
+	
+						fmt.Println("Error sending start menu: ", err)
+					}
+					go help.AddToDelete1(ticket.SupChatID, sent.MessageID)
+				}
 			}
 		}
 	}

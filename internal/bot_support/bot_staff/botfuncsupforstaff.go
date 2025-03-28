@@ -14,6 +14,36 @@ import (
 func HandleMessageSwitchForAuthorizedInTableStaff(update tgbotapi.Update, bot *tgbotapi.BotAPI, staff *database.Staff){
 	upM := update.Message
 	fmt.Printf("Handle message on support bot from staff: %s. From user: %s\n", upM.Text, upM.Chat.UserName)
+	if value, exists := database.StaffMap[upM.Chat.ID]; exists{
+		if (value.CurrentTicket != 0){
+			message := database.TicketMessage{
+				TicketID:	value.CurrentTicket,
+				Support:	1,
+				ChatID:		value.ChatID,
+				UserName:	value.UserName,
+				MessageID:	upM.MessageID,
+				Time:		time.Now().Unix(),		
+			}
+			if err := message.InsertNew(); err != nil{
+				fmt.Println(err)
+				help.NewMessage(value.ChatID, bot, fmt.Sprintf("%v", err),false)
+				return
+			}
+			ticket, err := database.ReadTicketByID(value.CurrentTicket)
+			if err != nil {
+				fmt.Println(err)
+				help.NewMessage(value.ChatID, bot, fmt.Sprintf("%v", err),false)
+				return
+			}
+			msg := tgbotapi.NewCopyMessage(ticket.ChatID, message.ChatID, message.MessageID)
+			sent, err := bot.Send(msg)
+			if err != nil {
+				fmt.Println("Error sending: ", err)
+			} else {
+				go help.AddToDelete1(ticket.SupChatID, sent.MessageID)
+			}
+		}
+	}
 	switch upM.Text {
 		case "/start":
 			StartMenu(upM.Chat.ID, bot)
