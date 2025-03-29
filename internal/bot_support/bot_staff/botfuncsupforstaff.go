@@ -40,7 +40,7 @@ func HandleMessageSwitchForAuthorizedInTableStaff(update tgbotapi.Update, bot *t
 			if err != nil {
 				fmt.Println("Error sending: ", err)
 			} else {
-				go help.AddToDelete1(ticket.SupChatID, sent.MessageID)
+				go help.AddToDelete1(ticket.ChatID, sent.MessageID)
 			}
 		}
 	}

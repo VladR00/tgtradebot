@@ -56,7 +56,7 @@ func HandleMessageSwitchForUnauthorizedInTableStaff(update tgbotapi.Update, bot 
 					if err != nil {
 						fmt.Println("Error sending: ", err)
 					} else {
-						go help.AddToDelete1(ticket.SupChatID, sent.MessageID)
+						go help.AddToDelete1(staff.ChatID, sent.MessageID)
 					}
 				} else {
 					msg := tgbotapi.NewMessage(ticket.SupChatID, fmt.Sprintf("User %s send message by ticket %d, prefered language: %s", ticket.UserName, ticket.TicketID, ticket.Language))
