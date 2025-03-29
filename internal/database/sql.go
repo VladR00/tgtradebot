@@ -65,6 +65,88 @@ func IsTableExists(db *sql.DB, tableName string) bool {
 
 	return count > 0
 }
+func InitiateTables() error{
+	if err := CreateTable("users"); err != nil {
+		fmt.Println(err)
+		return err
+	}
+	if err := CreateTable("tickets"); err != nil {
+		fmt.Println(err)
+		return err
+	}
+	if err := CreateTable("tickets_messages"); err != nil {
+		fmt.Println(err)
+		return err
+	}
+	return nil
+}
+
+func checkingOpenTickets() ([]int64, error){
+	var opened []int64
+	db, err := OpenDB()
+	if err != nil {
+		return nil, err
+	}
+	defer db.Close()
+
+	query := (`SELECT id FROM tickets WHERE status = ?`)
+	
+	rows, err := db.Query(query, "Open")
+	if err != nil {
+		return nil, fmt.Errorf("Error executing query while check opened tickets: %w", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var ticketid int64
+		if err := rows.Scan(&ticketid); err != nil {
+			return nil, fmt.Errorf("Error scan while check opened tickets: %w", err)
+		}
+		opened = append(opened, ticketid)
+		fmt.Println("Found ticket ID:", ticketid)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("Error rows iteration while check opened tickets: %w", err)
+	}
+	return opened, nil
+}
+
+func InitiateMaps() error{
+	t, err := checkingOpenTickets() 
+	if err != nil {
+		if err == sql.ErrNoRows{
+			fmt.Println("Opened tickets not found")
+			return nil
+		}
+		return err
+	}
+	fmt.Println(t)
+	fmt.Println("try to add map BEFORE FOR")
+	for _, id := range t {
+		fmt.Println("try to add map")
+		ticket, err := ReadTicketByID(id)
+		if err != nil {
+			return err
+		}
+		ticket.MapUpdateOrCreate()
+		user := User{
+			ChatID:			ticket.ChatID,		
+			LinkName:		ticket.LinkName,
+			UserName:		ticket.UserName,	
+			CurrentTicket: 	ticket.TicketID,		
+		}
+		user.MapUpdateOrCreate()
+		staff, err := ReadStaffByID(ticket.SupChatID)
+		if err != nil {
+			return err
+		}
+		if staff.CurrentTicket == user.CurrentTicket{
+			staff.MapUpdateOrCreate()
+		}
+	}	
+	return nil
+}
 
 func OpenDB() (*sql.DB, error){
 	db, err := sql.Open("sqlite3", DBpath) 
@@ -327,9 +409,9 @@ func (s *Staff) MapUpdateOrCreate() {
 func (s *User) MapUpdateOrCreate() {
 	UserMap[s.ChatID] = *s
 }
-// func (s *Ticket) MapUpdateOrCreate() {
-// 	TicketMap[s.ChatID] = *s
-// }
+func (s *Ticket) MapUpdateOrCreate() {
+	TicketMap[s.TicketID] = *s
+}
 func (s *Staff) MapDelete() {
 	delete(StaffMap, s.ChatID)														
 }

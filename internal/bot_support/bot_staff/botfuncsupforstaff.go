@@ -14,6 +14,9 @@ import (
 func HandleMessageSwitchForAuthorizedInTableStaff(update tgbotapi.Update, bot *tgbotapi.BotAPI, staff *database.Staff){
 	upM := update.Message
 	fmt.Printf("Handle message on support bot from staff: %s. From user: %s\n", upM.Text, upM.Chat.UserName)
+	fmt.Println(database.UserMap)
+	fmt.Println(database.StaffMap)
+	fmt.Println(database.TicketMap)
 	if value, exists := database.StaffMap[upM.Chat.ID]; exists{
 		if (value.CurrentTicket != 0){
 			message := database.TicketMessage{
@@ -139,7 +142,7 @@ func AcceptTicket(chatID int64, bot *tgbotapi.BotAPI, ticketid string){
 		Time: 			ticketcr.Time,
 		ClosingTime: 	0,
 		Language:		ticketcr.Language,
-		Status:			"Chating",
+		Status:			"Open",
 	}
 	ticket.Update()
 	staff.CurrentTicket = ticketcr.TicketID
