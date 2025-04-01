@@ -36,6 +36,7 @@ func HandleMessageSwitchForAuthorizedInTableStaff(update tgbotapi.Update, bot *t
 			}
 			if err := newstaff.InsertNew(); err != nil{
 				help.NewMessage1(upM.Chat.ID, bot, fmt.Sprintf("Error initiating: %v", err), false)
+				return
 			}
 			msg := tgbotapi.NewMessage(upM.Chat.ID, fmt.Sprintf("Support successfully added by ID: %d", id))
 			keyboard := tgbotapi.NewInlineKeyboardMarkup(
