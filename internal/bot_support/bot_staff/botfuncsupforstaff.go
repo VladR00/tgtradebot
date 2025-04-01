@@ -33,6 +33,18 @@ func HandleMessageSwitchForAuthorizedInTableStaff(update tgbotapi.Update, bot *t
 			if err := newstaff.InsertNew(); err != nil{
 				help.NewMessage1(upM.Chat.ID, bot, fmt.Sprintf("Error initiating: %v", err), false)
 			}
+			msg := tgbotapi.NewMessage(upM.Chat.ID, fmt.Sprintf("Support successfully added by ID: %d", id))
+			keyboard := tgbotapi.NewInlineKeyboardMarkup(
+				tgbotapi.NewInlineKeyboardRow(
+					tgbotapi.NewInlineKeyboardButtonData("Back", "BackToMenuWithoutChanges"),
+				),
+			)
+			msg.ReplyMarkup = keyboard
+			sent, err := bot.Send(msg)
+			if err != nil {
+				fmt.Println("Error sending start menu: ", err)
+			}
+			go help.AddToDelete1(sent.Chat.ID, sent.MessageID)	
 		}
 		if (value.CurrentTicket != 0){
 			message := database.TicketMessage{

@@ -44,5 +44,6 @@ func AddSupButton(chatID int64, bot *tgbotapi.BotAPI, staff *database.Staff){
 
 func BackToMenuWithoutChanges(chatID int64, bot *tgbotapi.BotAPI, staff *database.Staff){
 	staff.AddSup = false
+	staff.MapUpdateOrCreate()
 	StartMenu(chatID, bot, staff)
 }
