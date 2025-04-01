@@ -18,6 +18,22 @@ func HandleMessageSwitchForAuthorizedInTableStaff(update tgbotapi.Update, bot *t
 	fmt.Println(database.StaffMap)
 	fmt.Println(database.TicketMap)
 	if value, exists := database.StaffMap[upM.Chat.ID]; exists{
+		if (value.AddSup){
+			id, _ := strconv.ParseInt(upM.Text, 10, 64)
+			newstaff := database.Staff{
+				ChatID:				id,
+				Admin:				0,
+				CurrentTicket: 		0,
+				LinkName:			"Agent",
+				UserName:			"nil",
+				TicketClosed:		0,
+				Rating:				0,
+				Time: 		 		time.Now().Unix(),
+			}
+			if err := newstaff.InsertNew(); err != nil{
+				help.NewMessage1(upM.Chat.ID, bot, fmt.Sprintf("Error initiating: %v", err), false)
+			}
+		}
 		if (value.CurrentTicket != 0){
 			message := database.TicketMessage{
 				TicketID:	value.CurrentTicket,
@@ -49,32 +65,55 @@ func HandleMessageSwitchForAuthorizedInTableStaff(update tgbotapi.Update, bot *t
 	}
 	switch upM.Text {
 		case "/start":
-			StartMenu(upM.Chat.ID, bot)
+			StartMenu(upM.Chat.ID, bot, staff)
 	}
 }
 
 func HandleCallBackSwitchForAuthorizedInTableStaff(update tgbotapi.Update, bot *tgbotapi.BotAPI, staff *database.Staff){
 	upCQ := update.CallbackQuery
 	fmt.Printf("Handle callback on support bot from staff: %s. From user: %s\n", upCQ.Data, upCQ.Message.Chat.UserName)
+	switch upCQ.Data {
+		case "Menu":
+			StartMenu(upCQ.Message.Chat.ID, bot, staff)
+			return
+		case "adminMenu":
+			StartMenuAdmin(upCQ.Message.Chat.ID, bot)
+			return
+		case "AddSup":
+			AddSupButton(upCQ.Message.Chat.ID, bot, staff)
+			return 
+		case "BackToMenuWithoutChanges":
+			BackToMenuWithoutChanges(upCQ.Message.Chat.ID, bot, staff)
+			return
+	}
+
 	switch {
 		case strings.HasPrefix(upCQ.Data, "Accept"):
 			AcceptTicket(upCQ.Message.Chat.ID, bot, strings.TrimPrefix(upCQ.Data, "Accept"))
-		case upCQ.Data == "Menu":
-			StartMenu(upCQ.Message.Chat.ID, bot)
 		case strings.HasPrefix(upCQ.Data, "Close"):
 			CloseTicket(upCQ.Message.Chat.ID, bot, strings.TrimPrefix(upCQ.Data, "Close"))
 	}
 }	
 
-func StartMenu(chatID int64, bot *tgbotapi.BotAPI){
+func StartMenu(chatID int64, bot *tgbotapi.BotAPI, staff *database.Staff){
 	go help.ClearMessages1(chatID, bot)
+	var defaultKeyboard [][]tgbotapi.InlineKeyboardButton
+	msg := tgbotapi.NewMessage(chatID, "support")
 
-	msg := tgbotapi.NewMessage(chatID, "сапорт")
-	keyboard := tgbotapi.NewInlineKeyboardMarkup(
-		tgbotapi.NewInlineKeyboardRow(
+	defaultKeyboard = [][]tgbotapi.InlineKeyboardButton{
+		{
 			tgbotapi.NewInlineKeyboardButtonData("Menu", "Menu"),
-		),
-	)
+		}, 
+	}
+
+	adminpanel := []tgbotapi.InlineKeyboardButton{
+		tgbotapi.NewInlineKeyboardButtonData("admin panel", "adminMenu"),
+	}
+
+	if staff.Admin == 1{
+		defaultKeyboard = append(defaultKeyboard, adminpanel)
+	}
+	keyboard := tgbotapi.NewInlineKeyboardMarkup(defaultKeyboard...)
 	msg.ReplyMarkup = keyboard
 	sent, err := bot.Send(msg)
 	if err != nil {
@@ -91,7 +130,7 @@ func AcceptTicket(chatID int64, bot *tgbotapi.BotAPI, ticketid string){
 		return
 	}
 	if ticketcr.SupChatID != 0 {
-		help.NewMessage(chatID, bot, fmt.Sprintf("Ticket %d has already been taken by: %s", ticketcr.TicketID, ticketcr.UserName), true)
+		help.NewMessage(chatID, bot, fmt.Sprintf("Ticket %d has already been taken by: %s", ticketcr.TicketID, ticketcr.SupUserName), true)
 		return
 	}
 	staff, err := database.ReadStaffByID(chatID)
@@ -196,5 +235,5 @@ func CloseTicket(chatID int64, bot *tgbotapi.BotAPI, ticketid string){
 		}
 	}
 	go help.ClearMessages1(chatID, bot)
-	StartMenu(chatID, bot)
+	StartMenu(chatID, bot, staff)
 }

@@ -168,7 +168,7 @@ func initiatebutton(update tgbotapi.Update, bot *tgbotapi.BotAPI){
 		}
 		staff := database.Staff{
 			ChatID:				upCQ.Chat.ID,
-			Admin:				2,
+			Admin:				1,
 			CurrentTicket: 		0,
 			LinkName:			fmt.Sprintf("@%s",upCQ.Chat.UserName),
 			UserName:			upCQ.Chat.FirstName,

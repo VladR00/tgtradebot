@@ -32,6 +32,7 @@ type Staff struct{
 	TicketClosed	int64
 	Rating 			int64
 	Time 			int64
+	AddSup			bool
 }
 type Ticket struct{
 	TicketID		int64
