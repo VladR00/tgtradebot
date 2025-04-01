@@ -20,6 +20,10 @@ func HandleMessageSwitchForAuthorizedInTableStaff(update tgbotapi.Update, bot *t
 	if value, exists := database.StaffMap[upM.Chat.ID]; exists{
 		if (value.AddSup){
 			id, _ := strconv.ParseInt(upM.Text, 10, 64)
+			if id == 0 {
+				help.NewMessage1(upM.Chat.ID, bot, fmt.Sprintf("Wrong ChatID: %d. Try another one", id), true)
+				return
+			}
 			newstaff := database.Staff{
 				ChatID:				id,
 				Admin:				0,
