@@ -179,7 +179,7 @@ func CreateTable(table string) error{
 		case "staff":
 			q = `CREATE TABLE IF NOT EXISTS staff (
 					chat_id INTEGER PRIMARY KEY,
-					admin BOOL,
+					admin INTEGER,
 					current_ticket INTEGER,
 					linkname TEXT, 
 					username TEXT,

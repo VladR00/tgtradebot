@@ -83,8 +83,12 @@ func supBotUpdates(bot *tgbotapi.BotAPI){
 	for update := range updates {
 		if update.Message != nil {
 			staff, _ := database.ReadStaffByID(update.Message.Chat.ID)
-			if (staff != nil){																			//Authorized
+			if (staff != nil){	
+				if staff.Admin > 0 {
+					go staffbot.HandleMessageSwitchForAdmin(update, bot, staff)
+				}
 				go staffbot.HandleMessageSwitchForAuthorizedInTableStaff(update, bot, staff)			//Authorized
+				
 			} else {			
 				if value, _ := database.ReadUserByID(update.Message.Chat.ID); value == nil{		
 					user := database.User{
@@ -105,8 +109,11 @@ func supBotUpdates(bot *tgbotapi.BotAPI){
 		}
 		if update.CallbackQuery != nil {
 			staff, _ := database.ReadStaffByID(update.CallbackQuery.Message.Chat.ID)
-			if (staff != nil){																			//Authorized
-				go staffbot.HandleCallBackSwitchForAuthorizedInTableStaff(update, bot, staff)			//Authorized
+			if (staff != nil){				
+				if staff.Admin > 0 {
+					go staffbot.HandleCallBackSwitchForAdmin(update, bot, staff) 						//Authorized
+				}
+				go staffbot.HandleCallBackSwitchForAuthorizedInTableStaff(update, bot, staff)			//Authorized																
 			} else {
 				if value, _ := database.ReadUserByID(update.CallbackQuery.Message.Chat.ID); value == nil{		
 					user := database.User{

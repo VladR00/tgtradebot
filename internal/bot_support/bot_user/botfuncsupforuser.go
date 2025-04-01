@@ -43,7 +43,7 @@ func HandleMessageSwitchForUnauthorizedInTableStaff(update tgbotapi.Update, bot 
 			}
 			if ticket.SupChatID == 0 && ticket.Status == "Notificate"{
 				fmt.Println("notificate:")
-				go staffbot.NotificateSups(value, bot)
+				go NotificateSups(value, bot)
 			} else {
 				staff, err := database.ReadStaffByID(ticket.SupChatID)
 				if err != nil{
@@ -168,7 +168,7 @@ func initiatebutton(update tgbotapi.Update, bot *tgbotapi.BotAPI){
 		}
 		staff := database.Staff{
 			ChatID:				upCQ.Chat.ID,
-			Admin:				1,	
+			Admin:				2,
 			CurrentTicket: 		0,
 			LinkName:			fmt.Sprintf("@%s",upCQ.Chat.UserName),
 			UserName:			upCQ.Chat.FirstName,
@@ -179,7 +179,7 @@ func initiatebutton(update tgbotapi.Update, bot *tgbotapi.BotAPI){
 		if err := staff.InsertNew(); err != nil{
 			help.NewMessage1(upCQ.Chat.ID, bot, fmt.Sprintf("Error initiating: %v", err), false)
 		}
-		staffbot.StartMenu(upCQ.Chat.ID, bot)
+		staffbot.StartMenuAdmin(upCQ.Chat.ID, bot)
 	} else {
 		StartMenu(upCQ.Message.Chat.ID, bot)
 	}
@@ -250,4 +250,36 @@ func CreateTicket(user database.User, bot *tgbotapi.BotAPI){
 		fmt.Println("Error sending start menu: ", err)
 	}
 	go help.AddToDelete1(sent.Chat.ID, sent.MessageID)
+}
+
+func NotificateSups(user database.User, bot *tgbotapi.BotAPI){
+	stafflist, err := database.OutputStaffWithCurrTicketNull()
+	if err != nil {
+		fmt.Println(err)
+		return
+	} 
+	for _, staff := range stafflist{
+		msg := tgbotapi.NewMessage(staff.ChatID, fmt.Sprintf("New ticket with ID: %d\nUsername: %s\nPrefered language: %s\n", user.CurrentTicket, user.UserName, user.Language))
+		keyboard := tgbotapi.NewInlineKeyboardMarkup(
+			tgbotapi.NewInlineKeyboardRow(
+				tgbotapi.NewInlineKeyboardButtonData("Accept", fmt.Sprintf("Accept%d",user.CurrentTicket)),
+			),
+		)
+		msg.ReplyMarkup = keyboard
+		sent, err := bot.Send(msg)
+		if err != nil {
+			fmt.Println("Error sending start menu: ", err)
+		}
+		go help.AddToDelete1(sent.Chat.ID, sent.MessageID)
+	}
+	ticket, err := database.ReadTicketByID(user.CurrentTicket)
+	if err != nil {
+		fmt.Println(err)
+	}
+	ticket.Status = "Open"
+	fmt.Println(ticket)
+	err = ticket.Update()
+	if err != nil {
+		fmt.Println(err)
+	}
 }
