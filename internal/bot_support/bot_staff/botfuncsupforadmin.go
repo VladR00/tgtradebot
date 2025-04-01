@@ -13,6 +13,7 @@ func StartMenuAdmin(chatID int64, bot *tgbotapi.BotAPI){
 	keyboard := tgbotapi.NewInlineKeyboardMarkup(
 		tgbotapi.NewInlineKeyboardRow(
 			tgbotapi.NewInlineKeyboardButtonData("SupMenu", "Menu"),
+			tgbotapi.NewInlineKeyboardButtonData("SupList", "SupList"),
 			tgbotapi.NewInlineKeyboardButtonData("AddSup", "AddSup"),
 		),
 	)
@@ -46,4 +47,47 @@ func BackToMenuWithoutChanges(chatID int64, bot *tgbotapi.BotAPI, staff *databas
 	staff.AddSup = false
 	staff.MapUpdateOrCreate()
 	StartMenu(chatID, bot, staff)
+}
+
+func SupListButton(chatID int64, bot *tgbotapi.BotAPI){
+	go help.ClearMessages1(chatID, bot)
+	suplist, err := database.OutputStaff()
+	if err != nil {
+		help.NewMessage1(chatID, bot, fmt.Sprintf("Error outputing suplist while read DB: %v", err), true)
+	}
+	var DefaultKeyboard [][]tgbotapi.InlineKeyboardButton
+	msg := tgbotapi.NewMessage(chatID, "SupList")
+
+	var row []tgbotapi.InlineKeyboardButton
+
+	for _, sup := range suplist {
+		id := fmt.Sprintf("%d",sup.ChatID)
+		if chatID == sup.ChatID{
+			id = "You"
+		}
+		support := tgbotapi.NewInlineKeyboardButtonData(id, fmt.Sprintf("SupProfile%d",sup.ChatID))
+		row = append(row, support)
+
+		if len(row) == 2 {
+			DefaultKeyboard = append(DefaultKeyboard, row)	
+			row = []tgbotapi.InlineKeyboardButton{}
+		}
+		
+	}
+
+	if len(row) > 0 {
+		DefaultKeyboard = append(DefaultKeyboard, row)
+	}
+
+	back := []tgbotapi.InlineKeyboardButton{
+		tgbotapi.NewInlineKeyboardButtonData("Back", "adminMenu"),
+	}
+	DefaultKeyboard = append(DefaultKeyboard, back)
+	keyboard := tgbotapi.NewInlineKeyboardMarkup(DefaultKeyboard...)
+		msg.ReplyMarkup = keyboard
+		sent, err := bot.Send(msg)
+		if err != nil {
+			fmt.Println("Error sending start menu: ", err)
+		}
+		go help.AddToDelete1(sent.Chat.ID, sent.MessageID)	
 }

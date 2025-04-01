@@ -99,9 +99,12 @@ func HandleCallBackSwitchForAuthorizedInTableStaff(update tgbotapi.Update, bot *
 		case "AddSup":
 			AddSupButton(upCQ.Message.Chat.ID, bot, staff)
 			return 
-		case "BackToMenuWithoutChanges":
+		case "BackToMenuWithoutChanges": 
 			BackToMenuWithoutChanges(upCQ.Message.Chat.ID, bot, staff)
 			return
+		case "SupList":
+			SupListButton(upCQ.Message.Chat.ID, bot)
+			return 
 	}
 
 	switch {
@@ -147,7 +150,7 @@ func AcceptTicket(chatID int64, bot *tgbotapi.BotAPI, ticketid string){
 		return
 	}
 	if ticketcr.SupChatID != 0 {
-		help.NewMessage(chatID, bot, fmt.Sprintf("Ticket %d has already been taken by: %s", ticketcr.TicketID, ticketcr.SupUserName), true)
+		help.NewMessage1(chatID, bot, fmt.Sprintf("Ticket %d has already been taken by: %s", ticketcr.TicketID, ticketcr.SupUserName), true)
 		return
 	}
 	staff, err := database.ReadStaffByID(chatID)

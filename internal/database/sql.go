@@ -600,3 +600,37 @@ func ReadAllMessagesByTicketID(ticketid int64) ([]*TicketMessage, error){
 	}
 	return messagelist, nil
 }
+
+func OutputStaff() ([]*Staff, error){
+	db, err := OpenDB()
+	if err != nil {
+		return nil, err
+	}
+	defer db.Close()
+
+	query := ("SELECT * FROM staff")
+
+	var stafflist []*Staff
+
+	rows, err := db.Query(query, 0)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next(){
+		staff := &Staff{}
+		err := rows.Scan(&staff.ChatID, &staff.Admin, &staff.CurrentTicket, &staff.LinkName, &staff.UserName, &staff.TicketClosed, &staff.Rating, &staff.Time)
+		if err != nil {
+			if err == sql.ErrNoRows{
+				fmt.Println("Staff not found while reads staff:",err)
+			}
+			fmt.Println("Undefined error while reads staff:",err)
+		}
+		stafflist = append(stafflist, staff)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return stafflist, nil //staff.Time = time.Unix(registrationTime, 0).Format("2006-01-02 15:04")
+}
