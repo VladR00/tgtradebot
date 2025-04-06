@@ -4,12 +4,14 @@ import (
 	"log"
 	"time"
 	"fmt"
+	"strconv"
 
 	database "tgbottrade/internal/database"
 	mainbot  "tgbottrade/internal/bot_main"
 	supbot	 "tgbottrade/internal/bot_support/bot_user"
 	staffbot "tgbottrade/internal/bot_support/bot_staff"
 	config	 "tgbottrade/pkg/api/config"
+	help 	 "tgbottrade/pkg/api/help"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/arthurshafikov/cryptobot-sdk-golang/cryptobot"
@@ -35,10 +37,6 @@ func main() {
 		log.Fatalf("%v",err)
 	}
 	
-	if err := database.InitiateMaps(); err != nil {
-		log.Fatalf("%v",err)
-	}
-
 	botmain, err := tgbotapi.NewBotAPI(config.TelegramBotToken)
 	if err != nil {
 		log.Fatalf("Error creating bot: %v", err)
@@ -51,6 +49,26 @@ func main() {
 		log.Fatalf("Error creating bot: %v", err)
 	}
 	log.Printf("Authorized on account %s", botsup.Self.UserName)
+
+	if err := database.InitiateMaps(); err != nil {
+		if err.Error() == "staff removed"{
+			for _, value := range database.UserMap {
+				if value.CurrentTicket != 0{
+					continue
+				}
+				help.NewMessage1(value.ChatID, botsup, "Rare message. If you are reading this, it means that the support you were talking to was banned before the ticket could be closed. We recommend that you recreate the ticket and send it to this ticket number so that we are on the topic and don't have to rewrite your question.\nWrite: /start", true)
+				ticketid, _ := strconv.ParseInt(value.UserName, 10, 64)
+				ticket := database.TicketMap[ticketid]
+				ticket.Status = "Closed"
+				ticket.ClosingTime = time.Now().Unix()
+				ticket.Update()
+				delete(database.TicketMap, ticketid)	
+				value.MapDelete()
+			}
+		} else {
+			log.Fatalf("%v",err)
+		}
+	}
 
 	go supBotUpdates(botsup)
 	go mainBotUpdates(botmain)

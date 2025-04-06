@@ -3,6 +3,7 @@ package database
 import (
 	"database/sql"
 	"fmt"
+	"strconv"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -123,9 +124,8 @@ func InitiateMaps() error{
 		return err
 	}
 	fmt.Println(t)
-	fmt.Println("try to add map BEFORE FOR")
+	er := 0
 	for _, id := range t {
-		fmt.Println("try to add map")
 		ticket, err := ReadTicketByID(id)
 		if err != nil {
 			return err
@@ -137,15 +137,23 @@ func InitiateMaps() error{
 			UserName:		ticket.UserName,	
 			CurrentTicket: 	ticket.TicketID,		
 		}
+
 		user.MapUpdateOrCreate()
 		staff, err := ReadStaffByID(ticket.SupChatID)
 		if err != nil {
-			return err
+			user.CurrentTicket = 0
+			user.UserName = strconv.FormatInt(id, 10)
+			user.MapUpdateOrCreate()
+			er++
+			continue
 		}
 		if staff.CurrentTicket == user.CurrentTicket{
 			staff.MapUpdateOrCreate()
 		}
 	}	
+	if (er != 0){
+		return fmt.Errorf("staff removed")
+	}
 	return nil
 }
 
@@ -633,4 +641,25 @@ func OutputStaff() ([]*Staff, error){
 		return nil, err
 	}
 	return stafflist, nil //staff.Time = time.Unix(registrationTime, 0).Format("2006-01-02 15:04")
+}
+
+func DeleteStaffByID(chatID int64) (error){
+	db, err := OpenDB()
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+
+	query := ("DELETE FROM staff WHERE chat_id = ?")
+
+	result, err := db.Exec(query, chatID)
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("Failed to get affected rows: %w", err)
+	}
+	if rowsAffected == 0 {
+		return fmt.Errorf("staff with chatID %d not found", chatID)
+	}
+	return  nil //staff.Time = time.Unix(registrationTime, 0).Format("2006-01-02 15:04")
 }

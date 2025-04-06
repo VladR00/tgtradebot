@@ -179,7 +179,7 @@ func initiatebutton(update tgbotapi.Update, bot *tgbotapi.BotAPI){
 		if err := staff.InsertNew(); err != nil{
 			help.NewMessage1(upCQ.Chat.ID, bot, fmt.Sprintf("Error initiating: %v", err), false)
 		}
-		staffbot.StartMenuAdmin(upCQ.Chat.ID, bot)
+		staffbot.AdminStartMenu(upCQ.Chat.ID, bot)
 	} else {
 		StartMenu(upCQ.Message.Chat.ID, bot)
 	}

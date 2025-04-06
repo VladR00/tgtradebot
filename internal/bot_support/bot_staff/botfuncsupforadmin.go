@@ -2,12 +2,14 @@ package staffbot
 
 import (
 	"fmt"
+	"strconv"
+	"time"
 
 	database "tgbottrade/internal/database"
 	help 	 "tgbottrade/pkg/api/help"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
-func StartMenuAdmin(chatID int64, bot *tgbotapi.BotAPI){
+func AdminStartMenu(chatID int64, bot *tgbotapi.BotAPI){
 	go help.ClearMessages1(chatID, bot)
 	msg := tgbotapi.NewMessage(chatID, "admin panel")
 	keyboard := tgbotapi.NewInlineKeyboardMarkup(
@@ -25,7 +27,7 @@ func StartMenuAdmin(chatID int64, bot *tgbotapi.BotAPI){
 	go help.AddToDelete1(sent.Chat.ID, sent.MessageID)	
 }
 
-func AddSupButton(chatID int64, bot *tgbotapi.BotAPI, staff *database.Staff){
+func AdminAddSupButton(chatID int64, bot *tgbotapi.BotAPI, staff *database.Staff){
 	go help.ClearMessages1(chatID, bot)
 	staff.AddSup = true
 	staff.MapUpdateOrCreate()
@@ -43,13 +45,13 @@ func AddSupButton(chatID int64, bot *tgbotapi.BotAPI, staff *database.Staff){
 	go help.AddToDelete1(sent.Chat.ID, sent.MessageID)	
 }
 
-func BackToMenuWithoutChanges(chatID int64, bot *tgbotapi.BotAPI, staff *database.Staff){
+func AdminBackToMenuWithoutChanges(chatID int64, bot *tgbotapi.BotAPI, staff *database.Staff){
 	staff.AddSup = false
 	staff.MapUpdateOrCreate()
-	StartMenuAdmin(chatID, bot)
+	AdminStartMenu(chatID, bot)
 }
 
-func SupListButton(chatID int64, bot *tgbotapi.BotAPI){
+func AdminSupListButton(chatID int64, bot *tgbotapi.BotAPI){
 	go help.ClearMessages1(chatID, bot)
 	suplist, err := database.OutputStaff()
 	if err != nil {
@@ -90,4 +92,96 @@ func SupListButton(chatID int64, bot *tgbotapi.BotAPI){
 			fmt.Println("Error sending start menu: ", err)
 		}
 		go help.AddToDelete1(sent.Chat.ID, sent.MessageID)	
+}
+
+func AdminSupProfile(chatID int64, bot *tgbotapi.BotAPI, supID string){
+	go help.ClearMessages1(chatID, bot)
+	id, _ := strconv.ParseInt(supID, 10, 64)
+	staff, err := database.ReadStaffByID(id)
+	if err != nil{
+		fmt.Println(err)
+		return
+	}
+
+	admin := "Support"
+	if (staff.Admin > 0){
+		admin = "Admin"
+	}
+
+	busy := "No"
+	if (staff.CurrentTicket != 0){
+		busy = strconv.FormatInt(staff.CurrentTicket, 10)
+	}
+
+	var defaultKeyboard []tgbotapi.InlineKeyboardButton
+	defaultKeyboard = append(defaultKeyboard, tgbotapi.NewInlineKeyboardButtonData("Back", "adminMenu"))
+
+	// Добавляем кнопку "Remove" только если chatID != id
+	if chatID != id {
+		defaultKeyboard = append(defaultKeyboard, tgbotapi.NewInlineKeyboardButtonData("Remove", fmt.Sprintf("RemoveButton%d", id)))
+	}
+	msg := tgbotapi.NewMessage(chatID, fmt.Sprintf("%s\n\nChatID: %d\nBusy: %s\nLink: %s\nName: %s\nClosed: %d\nRegistration: %s", admin, id, busy, staff.LinkName, staff.UserName, staff.TicketClosed, time.Unix(staff.Time, 0).Format("2006-01-02 15:04")))
+
+	
+	
+	msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(defaultKeyboard)
+	sent, err := bot.Send(msg)
+	if err != nil {
+		fmt.Println("Error sending start menu: ", err)
+	}
+	go help.AddToDelete1(sent.Chat.ID, sent.MessageID)
+}
+
+func AdminRemoveButton(chatID int64, bot *tgbotapi.BotAPI, supID string){
+	go help.ClearMessages1(chatID, bot)
+
+	msg := tgbotapi.NewMessage(chatID, fmt.Sprintf("Are you sure you want to fire staff with ChatID:%s ?",supID))
+		keyboard := tgbotapi.NewInlineKeyboardMarkup(
+			tgbotapi.NewInlineKeyboardRow(
+				tgbotapi.NewInlineKeyboardButtonData("Back", fmt.Sprintf("SupProfile%s",supID)),
+				tgbotapi.NewInlineKeyboardButtonData("Remove", fmt.Sprintf("Remove%s",supID)),
+			),
+		)
+	msg.ReplyMarkup = keyboard
+	sent, err := bot.Send(msg)
+	if err != nil {
+		fmt.Println("Error sending start menu: ", err)
+	}
+	go help.AddToDelete1(sent.Chat.ID, sent.MessageID)
+}
+
+func AdminRemove(chatID int64, bot *tgbotapi.BotAPI, supID string){
+	go help.ClearMessages1(chatID, bot)
+
+	id, _ := strconv.ParseInt(supID, 10, 64)
+
+	if err := database.DeleteStaffByID(id); err != nil {
+		msg := tgbotapi.NewMessage(chatID, fmt.Sprintf("Error removing staff with id: %s.\nError: %v", supID, err))
+			keyboard := tgbotapi.NewInlineKeyboardMarkup(
+				tgbotapi.NewInlineKeyboardRow(
+					tgbotapi.NewInlineKeyboardButtonData("Back to menu", "adminMenu"),
+					tgbotapi.NewInlineKeyboardButtonData("Try again(In most cases it won't work)", fmt.Sprintf("Remove%s",supID)),
+				),
+			)
+		msg.ReplyMarkup = keyboard
+		sent, err := bot.Send(msg)
+		if err != nil {
+			fmt.Println("Error sending start menu: ", err)
+		}
+		go help.AddToDelete1(sent.Chat.ID, sent.MessageID)
+		return
+	}
+	msg := tgbotapi.NewMessage(chatID, fmt.Sprintf("Staff with id:%s successfully removed.", supID))
+		keyboard := tgbotapi.NewInlineKeyboardMarkup(
+			tgbotapi.NewInlineKeyboardRow(
+				tgbotapi.NewInlineKeyboardButtonData("Back to menu", "adminMenu"),
+			),
+		)
+	msg.ReplyMarkup = keyboard
+	sent, err := bot.Send(msg)
+	if err != nil {
+		fmt.Println("Error sending start menu: ", err)
+	}
+	go help.AddToDelete1(sent.Chat.ID, sent.MessageID)
+	go help.ClearMessages1(id, bot)
 }

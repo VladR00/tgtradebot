@@ -94,16 +94,16 @@ func HandleCallBackSwitchForAuthorizedInTableStaff(update tgbotapi.Update, bot *
 			StartMenu(upCQ.Message.Chat.ID, bot, staff)
 			return
 		case "adminMenu":
-			StartMenuAdmin(upCQ.Message.Chat.ID, bot)
+			AdminStartMenu(upCQ.Message.Chat.ID, bot)
 			return
 		case "AddSup":
-			AddSupButton(upCQ.Message.Chat.ID, bot, staff)
+			AdminAddSupButton(upCQ.Message.Chat.ID, bot, staff)
 			return 
 		case "BackToMenuWithoutChanges": 
-			BackToMenuWithoutChanges(upCQ.Message.Chat.ID, bot, staff)
+			AdminBackToMenuWithoutChanges(upCQ.Message.Chat.ID, bot, staff)
 			return
 		case "SupList":
-			SupListButton(upCQ.Message.Chat.ID, bot)
+			AdminSupListButton(upCQ.Message.Chat.ID, bot)
 			return 
 	}
 
@@ -112,6 +112,12 @@ func HandleCallBackSwitchForAuthorizedInTableStaff(update tgbotapi.Update, bot *
 			AcceptTicket(upCQ.Message.Chat.ID, bot, strings.TrimPrefix(upCQ.Data, "Accept"))
 		case strings.HasPrefix(upCQ.Data, "Close"):
 			CloseTicket(upCQ.Message.Chat.ID, bot, strings.TrimPrefix(upCQ.Data, "Close"))
+		case strings.HasPrefix(upCQ.Data, "SupProfile"):
+			AdminSupProfile(upCQ.Message.Chat.ID, bot, strings.TrimPrefix(upCQ.Data, "SupProfile"))
+		case strings.HasPrefix(upCQ.Data, "RemoveButton"):
+			AdminRemoveButton(upCQ.Message.Chat.ID, bot, strings.TrimPrefix(upCQ.Data, "RemoveButton"))
+		case strings.HasPrefix(upCQ.Data, "Remove"):
+			AdminRemove(upCQ.Message.Chat.ID, bot, strings.TrimPrefix(upCQ.Data, "Remove"))
 	}
 }	
 
