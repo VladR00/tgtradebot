@@ -146,6 +146,7 @@ func StartMenu(chatID int64, bot *tgbotapi.BotAPI, staff *database.Staff){
 		fmt.Println("Error sending start menu: ", err)
 	}
 	go help.AddToDelete1(sent.Chat.ID, sent.MessageID)	
+	go ViewOpenTickets(chatID, bot)
 }
 
 func AcceptTicket(chatID int64, bot *tgbotapi.BotAPI, ticketid string){
@@ -262,4 +263,57 @@ func CloseTicket(chatID int64, bot *tgbotapi.BotAPI, ticketid string){
 	}
 	go help.ClearMessages1(chatID, bot)
 	StartMenu(chatID, bot, staff)
+}
+
+func ViewOpenTickets(chatID int64, bot *tgbotapi.BotAPI){
+	tickets, err := database.ReadOpenTickets()
+	if err != nil {
+		help.NewMessage1(chatID, bot, fmt.Sprintf("Tickets can't load:%v", err), true)
+	}
+	for _, ticket := range tickets{
+		msg := tgbotapi.NewMessage(chatID, fmt.Sprintf("Ticket ID:%d, Language:%s\nUserName:%s\nOpen time:%s", ticket.TicketID, ticket.Language, ticket.UserName, time.Unix(ticket.Time, 0).Format("2006-01-02 15:04")))
+		keyboard := tgbotapi.NewInlineKeyboardMarkup(
+			tgbotapi.NewInlineKeyboardRow(
+				tgbotapi.NewInlineKeyboardButtonData("Accept", fmt.Sprintf("Accept%d",ticket.TicketID)),
+			),
+		)
+		msg.ReplyMarkup = keyboard
+		sent, err := bot.Send(msg)
+		if err != nil {
+			fmt.Println("Error sending start menu: ", err)
+		}
+		go help.AddToDelete1(sent.Chat.ID, sent.MessageID)
+	}
+}
+
+func NotificateSups(user database.User, bot *tgbotapi.BotAPI){
+	stafflist, err := database.OutputStaffWithCurrTicketNull()
+	if err != nil {
+		fmt.Println(err)
+		return
+	} 
+	for _, staff := range stafflist{
+		msg := tgbotapi.NewMessage(staff.ChatID, fmt.Sprintf("New ticket with ID: %d\nUsername: %s\nPrefered language: %s\n", user.CurrentTicket, user.UserName, user.Language))
+		keyboard := tgbotapi.NewInlineKeyboardMarkup(
+			tgbotapi.NewInlineKeyboardRow(
+				tgbotapi.NewInlineKeyboardButtonData("Accept", fmt.Sprintf("Accept%d",user.CurrentTicket)),
+			),
+		)
+		msg.ReplyMarkup = keyboard
+		sent, err := bot.Send(msg)
+		if err != nil {
+			fmt.Println("Error sending start menu: ", err)
+		}
+		go help.AddToDelete1(sent.Chat.ID, sent.MessageID)
+	}
+	ticket, err := database.ReadTicketByID(user.CurrentTicket)
+	if err != nil {
+		fmt.Println(err)
+	}
+	ticket.Status = "Open"
+	fmt.Println(ticket)
+	err = ticket.Update()
+	if err != nil {
+		fmt.Println(err)
+	}
 }

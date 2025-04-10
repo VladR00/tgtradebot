@@ -130,6 +130,7 @@ func InitiateMaps() error{
 		if err != nil {
 			return err
 		}
+		
 		ticket.MapUpdateOrCreate()
 		user := User{
 			ChatID:			ticket.ChatID,		
@@ -139,6 +140,9 @@ func InitiateMaps() error{
 		}
 
 		user.MapUpdateOrCreate()
+		if ticket.SupChatID == 0 {
+			continue
+		}
 		staff, err := ReadStaffByID(ticket.SupChatID)
 		if err != nil {
 			user.CurrentTicket = 0
@@ -494,6 +498,54 @@ func ReadOpenTicketByUserID(chatID int64) (*Ticket, error){
 		return nil, fmt.Errorf("Undefined error while reads tickets ReadOpenTicketByUserID: %w", err)
 	}
 	return ticket, nil 
+}
+
+func ReadOpenTickets() ([]*Ticket, error){
+	db, err := OpenDB()
+	if err != nil {
+		return nil, err
+	}
+	defer db.Close()
+
+	query := (`SELECT id, registration_time, closing_time, chat_id, sup_chat_id, linkname, username, sup_linkname, sup_username, prefered_language, status 
+              FROM tickets WHERE status != ?`)
+	
+	var ticketlist []*Ticket
+	
+	rows, err := db.Query(query, "Closed")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next(){
+		ticket := &Ticket{}
+		err = rows.Scan(
+			&ticket.TicketID, 
+			&ticket.Time, 
+			&ticket.ClosingTime, 
+			&ticket.ChatID, 
+			&ticket.SupChatID, 
+			&ticket.LinkName, 
+			&ticket.UserName, 
+			&ticket.SupLinkName, 
+			&ticket.SupUserName, 
+			&ticket.Language, 
+			&ticket.Status,)
+		if err != nil {
+			if err == sql.ErrNoRows{
+				fmt.Println("Ticket not found while reads tickets:",err)
+			}
+			fmt.Println("Undefined error while reads tickets:",err)
+		}
+		ticketlist = append(ticketlist, ticket)
+	}
+	
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return ticketlist, nil 
 }
 
 func ReadUserByID(chatID int64) (*User, error){

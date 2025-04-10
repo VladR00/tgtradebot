@@ -16,12 +16,7 @@ func HandleMessageSwitchForUnauthorizedInTableStaff(update tgbotapi.Update, bot 
 	fmt.Printf("Handle message on support bot from UnAuthorized: %s. From user: %s\n", upM.Text, upM.Chat.UserName)
 	
 	if value, exists := database.UserMap[upM.Chat.ID]; exists{
-		if value.UserName == "............................................................................."{
-			value.UserName = upM.Text
-			value.CurrentTicket = 0
-			value.MapUpdateOrCreate()
-			CreateTicket(value, bot)
-		} else if (value.CurrentTicket != 0){
+		if (value.CurrentTicket != 0){
 			message := database.TicketMessage{
 				TicketID:	value.CurrentTicket,
 				Support:	0,
@@ -43,7 +38,7 @@ func HandleMessageSwitchForUnauthorizedInTableStaff(update tgbotapi.Update, bot 
 			}
 			if ticket.SupChatID == 0 && ticket.Status == "Notificate"{
 				fmt.Println("notificate:")
-				go NotificateSups(value, bot)
+				go staffbot.NotificateSups(value, bot)
 			} else {
 				staff, err := database.ReadStaffByID(ticket.SupChatID)
 				if err != nil{
@@ -105,13 +100,11 @@ func CreateTicketName(chatID int64, bot *tgbotapi.BotAPI, language string){
 		help.NewMessage(chatID, bot, fmt.Sprintf("%v",err), true)
 		return
 	}
-	user.UserName = "............................................................................."
 	user.Language = language
 	user.CurrentTicket = 0
 	user.MapUpdateOrCreate()
-	help.NewMessage(chatID, bot, "Write how to address you", true)
-	
-	//go help.AddToDelete1(sent.Chat.ID, sent.MessageID)
+	CreateTicket(*user, bot)
+	//help.NewMessage(chatID, bot, "Write how to address you", true)
 }
 
 func StartMenu(chatID int64, bot *tgbotapi.BotAPI){
@@ -252,34 +245,3 @@ func CreateTicket(user database.User, bot *tgbotapi.BotAPI){
 	go help.AddToDelete1(sent.Chat.ID, sent.MessageID)
 }
 
-func NotificateSups(user database.User, bot *tgbotapi.BotAPI){
-	stafflist, err := database.OutputStaffWithCurrTicketNull()
-	if err != nil {
-		fmt.Println(err)
-		return
-	} 
-	for _, staff := range stafflist{
-		msg := tgbotapi.NewMessage(staff.ChatID, fmt.Sprintf("New ticket with ID: %d\nUsername: %s\nPrefered language: %s\n", user.CurrentTicket, user.UserName, user.Language))
-		keyboard := tgbotapi.NewInlineKeyboardMarkup(
-			tgbotapi.NewInlineKeyboardRow(
-				tgbotapi.NewInlineKeyboardButtonData("Accept", fmt.Sprintf("Accept%d",user.CurrentTicket)),
-			),
-		)
-		msg.ReplyMarkup = keyboard
-		sent, err := bot.Send(msg)
-		if err != nil {
-			fmt.Println("Error sending start menu: ", err)
-		}
-		go help.AddToDelete1(sent.Chat.ID, sent.MessageID)
-	}
-	ticket, err := database.ReadTicketByID(user.CurrentTicket)
-	if err != nil {
-		fmt.Println(err)
-	}
-	ticket.Status = "Open"
-	fmt.Println(ticket)
-	err = ticket.Update()
-	if err != nil {
-		fmt.Println(err)
-	}
-}
