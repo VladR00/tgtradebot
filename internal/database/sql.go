@@ -34,6 +34,7 @@ type Staff struct{
 	Rating 			int64
 	Time 			int64
 	AddSup			bool
+	ChangeName		bool
 }
 type Ticket struct{
 	TicketID		int64
@@ -367,10 +368,10 @@ func (s *Staff) Update() error{
 	defer db.Close()
 
 	query := (`UPDATE staff 
-			   SET current_ticket = ?, username = ?, ticket_closed = ?
+			   SET current_ticket = ?, username = ?, linkname = ?, ticket_closed = ?
 			   WHERE chat_id = ?`)
 
-	result, err := db.Exec(query, s.CurrentTicket, s.UserName, s.TicketClosed, s.ChatID)
+	result, err := db.Exec(query, s.CurrentTicket, s.UserName, s.LinkName, s.TicketClosed, s.ChatID)
 	if err != nil {
 		return fmt.Errorf("Can't update balance from staff: %w", err)
 	}

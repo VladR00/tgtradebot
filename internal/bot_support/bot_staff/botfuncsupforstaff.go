@@ -14,6 +14,14 @@ import (
 func HandleMessageSwitchForAuthorizedInTableStaff(update tgbotapi.Update, bot *tgbotapi.BotAPI, staff *database.Staff){
 	upM := update.Message
 	fmt.Printf("Handle message on support bot from staff: %s. From user: %s\n", upM.Text, upM.Chat.UserName)
+	if staff.LinkName == "Agent"{
+		staff.LinkName = fmt.Sprintf("@%s",upM.Chat.UserName)
+		staff.UserName = upM.Chat.FirstName
+		staff.Update()
+		if _, exists := database.StaffMap[upM.Chat.ID]; exists{ 
+			staff.MapUpdateOrCreate()
+		}
+	}
 	fmt.Println(database.UserMap)
 	fmt.Println(database.StaffMap)
 	fmt.Println(database.TicketMap)
@@ -41,7 +49,7 @@ func HandleMessageSwitchForAuthorizedInTableStaff(update tgbotapi.Update, bot *t
 			msg := tgbotapi.NewMessage(upM.Chat.ID, fmt.Sprintf("Support successfully added by ID: %d", id))
 			keyboard := tgbotapi.NewInlineKeyboardMarkup(
 				tgbotapi.NewInlineKeyboardRow(
-					tgbotapi.NewInlineKeyboardButtonData("Back", "BackToMenuWithoutChanges"),
+					tgbotapi.NewInlineKeyboardButtonData("Back", "AdminBackToMenuWithoutChanges"),
 				),
 			)
 			msg.ReplyMarkup = keyboard
@@ -50,8 +58,25 @@ func HandleMessageSwitchForAuthorizedInTableStaff(update tgbotapi.Update, bot *t
 				fmt.Println("Error sending start menu: ", err)
 			}
 			go help.AddToDelete1(sent.Chat.ID, sent.MessageID)	
-		}
-		if (value.CurrentTicket != 0){
+			return
+		} else if (value.ChangeName){
+			value.UserName = upM.Text
+			value.MapUpdateOrCreate()
+			value.Update()
+			msg := tgbotapi.NewMessage(upM.Chat.ID, fmt.Sprintf("New name confirmed: %s", value.UserName))
+			keyboard := tgbotapi.NewInlineKeyboardMarkup(
+				tgbotapi.NewInlineKeyboardRow(
+					tgbotapi.NewInlineKeyboardButtonData("Back", "BackToProfile"),
+				),
+			)
+			msg.ReplyMarkup = keyboard
+			sent, err := bot.Send(msg)
+			if err != nil {
+				fmt.Println("Error sending start menu: ", err)
+			}
+			go help.AddToDelete1(sent.Chat.ID, sent.MessageID)	
+			return
+		} else if (value.CurrentTicket != 0){
 			message := database.TicketMessage{
 				TicketID:	value.CurrentTicket,
 				Support:	1,
@@ -78,6 +103,7 @@ func HandleMessageSwitchForAuthorizedInTableStaff(update tgbotapi.Update, bot *t
 			} else {
 				go help.AddToDelete1(ticket.ChatID, sent.MessageID)
 			}
+			return
 		}
 	}
 	switch upM.Text {
@@ -89,6 +115,14 @@ func HandleMessageSwitchForAuthorizedInTableStaff(update tgbotapi.Update, bot *t
 func HandleCallBackSwitchForAuthorizedInTableStaff(update tgbotapi.Update, bot *tgbotapi.BotAPI, staff *database.Staff){
 	upCQ := update.CallbackQuery
 	fmt.Printf("Handle callback on support bot from staff: %s. From user: %s\n", upCQ.Data, upCQ.Message.Chat.UserName)
+	if staff.LinkName == "Agent"{
+		staff.LinkName = fmt.Sprintf("@%s",upCQ.Message.Chat.UserName)
+		staff.UserName = upCQ.Message.Chat.FirstName
+		staff.Update()
+		if _, exists := database.StaffMap[upCQ.Message.Chat.ID]; exists{ 
+			staff.MapUpdateOrCreate()
+		}
+	}
 	switch upCQ.Data {
 		case "Menu":
 			StartMenu(upCQ.Message.Chat.ID, bot, staff)
@@ -99,12 +133,21 @@ func HandleCallBackSwitchForAuthorizedInTableStaff(update tgbotapi.Update, bot *
 		case "AddSup":
 			AdminAddSupButton(upCQ.Message.Chat.ID, bot, staff)
 			return 
-		case "BackToMenuWithoutChanges": 
+		case "AdminBackToMenuWithoutChanges": 
 			AdminBackToMenuWithoutChanges(upCQ.Message.Chat.ID, bot, staff)
+			return
+		case "BackToProfile": 
+			BackToMenuWithoutChanges(upCQ.Message.Chat.ID, bot, staff)
 			return
 		case "SupList":
 			AdminSupListButton(upCQ.Message.Chat.ID, bot)
 			return 
+		case "Profile":
+			Profile(upCQ.Message.Chat.ID, bot, staff)
+			return
+		case "Change name":
+			ChangeName(upCQ.Message.Chat.ID, bot, staff)
+			return
 	}
 
 	switch {
@@ -129,6 +172,7 @@ func StartMenu(chatID int64, bot *tgbotapi.BotAPI, staff *database.Staff){
 	defaultKeyboard = [][]tgbotapi.InlineKeyboardButton{
 		{
 			tgbotapi.NewInlineKeyboardButtonData("Menu", "Menu"),
+			tgbotapi.NewInlineKeyboardButtonData("Profile", "Profile"),
 		}, 
 	}
 
@@ -147,6 +191,39 @@ func StartMenu(chatID int64, bot *tgbotapi.BotAPI, staff *database.Staff){
 	}
 	go help.AddToDelete1(sent.Chat.ID, sent.MessageID)	
 	go ViewOpenTickets(chatID, bot)
+}
+
+func Profile(chatID int64, bot *tgbotapi.BotAPI, staff *database.Staff){
+	go help.ClearMessages1(chatID, bot)
+
+	msg := tgbotapi.NewMessage(chatID, fmt.Sprintf("ChatID: %d\nCurrent ticket: %d\nLink: %s\nName: %s\nClosed tickets: %d\nRegistration: %s", staff.ChatID, staff.CurrentTicket, staff.LinkName, staff.UserName, staff.TicketClosed, time.Unix(staff.Time, 0).Format("2006-01-02 15:04")))
+	keyboard := tgbotapi.NewInlineKeyboardMarkup(
+		tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonData("Back", "Menu"),
+			tgbotapi.NewInlineKeyboardButtonData("Change name", "Change name"),
+		),
+	)
+	msg.ReplyMarkup = keyboard
+	sent, err := bot.Send(msg)
+	if err != nil {
+		fmt.Println("Error sending start menu: ", err)
+	}
+	go help.AddToDelete1(sent.Chat.ID, sent.MessageID)
+}
+
+func ChangeName(chatID int64, bot *tgbotapi.BotAPI, staff *database.Staff){
+	if value, exists := database.StaffMap[chatID]; exists{
+		value.ChangeName = true
+		value.MapUpdateOrCreate()
+		go help.ClearMessages1(chatID, bot)
+		help.NewMessage1(chatID, bot, "You can write your new name", true)
+	} else {
+		staff.ChangeName = true
+		staff.MapUpdateOrCreate()
+		go help.ClearMessages1(chatID, bot)
+		help.NewMessage1(chatID, bot, "You can write your new name", true)
+	}
+	return
 }
 
 func AcceptTicket(chatID int64, bot *tgbotapi.BotAPI, ticketid string){

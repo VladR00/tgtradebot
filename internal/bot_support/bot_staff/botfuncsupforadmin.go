@@ -47,8 +47,16 @@ func AdminAddSupButton(chatID int64, bot *tgbotapi.BotAPI, staff *database.Staff
 
 func AdminBackToMenuWithoutChanges(chatID int64, bot *tgbotapi.BotAPI, staff *database.Staff){
 	staff.AddSup = false
+	staff.ChangeName = false
 	staff.MapUpdateOrCreate()
 	AdminStartMenu(chatID, bot)
+}
+
+func BackToMenuWithoutChanges(chatID int64, bot *tgbotapi.BotAPI, staff *database.Staff){
+	staff.AddSup = false
+	staff.ChangeName = false
+	staff.MapUpdateOrCreate()
+	Profile(chatID, bot, staff)
 }
 
 func AdminSupListButton(chatID int64, bot *tgbotapi.BotAPI){
@@ -121,8 +129,6 @@ func AdminSupProfile(chatID int64, bot *tgbotapi.BotAPI, supID string){
 		defaultKeyboard = append(defaultKeyboard, tgbotapi.NewInlineKeyboardButtonData("Remove", fmt.Sprintf("RemoveButton%d", id)))
 	}
 	msg := tgbotapi.NewMessage(chatID, fmt.Sprintf("%s\n\nChatID: %d\nBusy: %s\nLink: %s\nName: %s\nClosed: %d\nRegistration: %s", admin, id, busy, staff.LinkName, staff.UserName, staff.TicketClosed, time.Unix(staff.Time, 0).Format("2006-01-02 15:04")))
-
-	
 	
 	msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(defaultKeyboard)
 	sent, err := bot.Send(msg)
