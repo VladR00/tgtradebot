@@ -223,6 +223,7 @@ func CreateTicket(user database.User, bot *tgbotapi.BotAPI){
 	}
 	user.CurrentTicket = ticket.TicketID
 	user.MapUpdateOrCreate()
+	ticket.MapUpdateOrCreate()
 	if err = user.Update(); err != nil {
 		fmt.Println(err)
 		help.NewMessage(user.ChatID, bot, fmt.Sprintf("%v",err), false)

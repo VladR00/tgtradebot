@@ -36,6 +36,17 @@ type Staff struct{
 	AddSup			bool
 	ChangeName		bool
 }
+
+type Invoice struct{
+	InvoiceID 		int64
+	ChatID 			int64
+	LinkName 		string
+	Amount 			int64
+	StringAmount 	string
+	Asset 			string
+	PaymentTime 	int64
+}
+
 type Ticket struct{
 	TicketID		int64
 	ChatID			int64
@@ -49,6 +60,7 @@ type Ticket struct{
 	Language		string
 	Status			string
 }
+
 type TicketMessage struct{
 	TicketID	int64
 	Support 	int32
@@ -81,6 +93,10 @@ func InitiateTables() error{
 		fmt.Println(err)
 		return err
 	}
+	if err := CreateTable("bookkeeping"); err != nil {
+		fmt.Println(err)
+		return err
+	}
 	return nil
 }
 
@@ -94,7 +110,7 @@ func checkingOpenTickets() ([]int64, error){
 
 	query := (`SELECT id FROM tickets WHERE status = ?`)
 	
-	rows, err := db.Query(query, "Open")
+	rows, err := db.Query(query, "Chat")
 	if err != nil {
 		return nil, fmt.Errorf("Error executing query while check opened tickets: %w", err)
 	}
@@ -202,7 +218,13 @@ func CreateTable(table string) error{
 					registration_time INTEGER)`
 		case "bookkeeping":
 			q = `CREATE TABLE IF NOT EXISTS bookkeeping (
-				`
+					invoice_id INTEGER PRIMARY KEY,
+					chat_id INTEGER,
+					linkname TEXT,
+					amount DECIMAL(15,2),
+					amount_string TEXT,
+					asset TEXT,
+					payment_time INTEGER)`
 		case "tickets":
 			q = `CREATE TABLE IF NOT EXISTS tickets (
 				id INTEGER PRIMARY KEY,
@@ -286,6 +308,29 @@ func (s *Staff) InsertNew() error{
 	}
 	return nil
 }
+
+func (s *Invoice) InsertNew() error{
+	db, err := OpenDB()
+	if err != nil {
+		fmt.Println(err)
+		return err
+	}
+	defer db.Close()
+
+	query, err := db.Prepare("INSERT INTO bookkeeping (invoice_id, chat_id, linkname, amount, amount_string, asset, payment_time) VALUES (?, ?, ?, ?, ?, ?, ?)")
+	if err != nil {
+		fmt.Println(err)
+		return fmt.Errorf("Can't preparing query for insert new payment into bookkeeping: %w", err)
+	}
+	defer query.Close()
+
+	if _, err = query.Exec(s.InvoiceID, s.ChatID, s.LinkName, s.Amount, s.StringAmount, s.Asset, s.PaymentTime); err != nil { 
+		fmt.Println(err)
+		return fmt.Errorf("Can't execute inserting new payment into bookkeeping: %w", err)
+	}
+	return nil
+}
+
 
 func (s *Ticket) InsertNew() error{
 	db, err := OpenDB()
@@ -432,6 +477,9 @@ func (s *Staff) MapDelete() {
 func (s *User) MapDelete() {
 	delete(UserMap, s.ChatID)	
 }
+func (s *Ticket) MapDelete() {
+	delete(TicketMap, s.TicketID)	
+}
 
 func ReadTicketByID(ticketID int64) (*Ticket, error){
 	db, err := OpenDB()
@@ -536,6 +584,7 @@ func ReadOpenTickets() ([]*Ticket, error){
 		if err != nil {
 			if err == sql.ErrNoRows{
 				fmt.Println("Ticket not found while reads tickets:",err)
+				continue
 			}
 			fmt.Println("Undefined error while reads tickets:",err)
 		}
@@ -617,6 +666,7 @@ func OutputStaffWithCurrTicketNull() ([]*Staff, error){
 		if err != nil {
 			if err == sql.ErrNoRows{
 				fmt.Println("Staff not found while reads staff:",err)
+				continue
 			}
 			fmt.Println("Undefined error while reads staff:",err)
 		}
@@ -651,6 +701,7 @@ func ReadAllMessagesByTicketID(ticketid int64) ([]*TicketMessage, error){
 		if err != nil {
 			if err == sql.ErrNoRows{
 				fmt.Println("Message not found while reads tickets_messages:",err)
+				continue
 			}
 			fmt.Println("Undefined error while reads tickets_messages:",err)
 		}
@@ -685,6 +736,7 @@ func OutputStaff() ([]*Staff, error){
 		if err != nil {
 			if err == sql.ErrNoRows{
 				fmt.Println("Staff not found while reads staff:",err)
+				continue
 			}
 			fmt.Println("Undefined error while reads staff:",err)
 		}
@@ -715,4 +767,39 @@ func DeleteStaffByID(chatID int64) (error){
 		return fmt.Errorf("staff with chatID %d not found", chatID)
 	}
 	return  nil //staff.Time = time.Unix(registrationTime, 0).Format("2006-01-02 15:04")
+}
+
+func OutputPaymentsByID(chatID int64) ([]*Invoice, error){
+	db, err := OpenDB()
+	if err != nil {
+		return nil, err
+	}
+	defer db.Close()
+
+	query := ("SELECT * FROM bookkeeping WHERE chat_id = ?")
+
+	var paymentlist []*Invoice
+
+	rows, err := db.Query(query, 0)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next(){
+		payment := &Invoice{}
+		err := rows.Scan(&payment.InvoiceID, &payment.ChatID, &payment.LinkName, &payment.Amount, &payment.StringAmount, &payment.Asset, &payment.PaymentTime)
+		if err != nil {
+			if err == sql.ErrNoRows{
+				fmt.Println("Payment not found while reads bookkeeping:",err)
+				continue
+			}
+			fmt.Println("Undefined error while reads bookkeeping:",err)
+		}
+		paymentlist = append(paymentlist, payment)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return paymentlist, nil //staff.Time = time.Unix(registrationTime, 0).Format("2006-01-02 15:04")
 }

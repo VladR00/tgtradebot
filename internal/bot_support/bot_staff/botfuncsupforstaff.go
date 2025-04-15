@@ -152,7 +152,7 @@ func HandleCallBackSwitchForAuthorizedInTableStaff(update tgbotapi.Update, bot *
 
 	switch {
 		case strings.HasPrefix(upCQ.Data, "Accept"):
-			AcceptTicket(upCQ.Message.Chat.ID, bot, strings.TrimPrefix(upCQ.Data, "Accept"))
+			AcceptTicket(upCQ.Message.Chat.ID, bot, strings.TrimPrefix(upCQ.Data, "Accept"), staff)
 		case strings.HasPrefix(upCQ.Data, "Close"):
 			CloseTicket(upCQ.Message.Chat.ID, bot, strings.TrimPrefix(upCQ.Data, "Close"))
 		case strings.HasPrefix(upCQ.Data, "SupProfile"):
@@ -226,7 +226,7 @@ func ChangeName(chatID int64, bot *tgbotapi.BotAPI, staff *database.Staff){
 	return
 }
 
-func AcceptTicket(chatID int64, bot *tgbotapi.BotAPI, ticketid string){
+func AcceptTicket(chatID int64, bot *tgbotapi.BotAPI, ticketid string, staff *database.Staff){
 	t, _ := strconv.ParseInt(ticketid, 10, 64)
 	ticketcr, err := database.ReadTicketByID(t)
 	if err != nil{
@@ -235,11 +235,10 @@ func AcceptTicket(chatID int64, bot *tgbotapi.BotAPI, ticketid string){
 	}
 	if ticketcr.SupChatID != 0 {
 		help.NewMessage1(chatID, bot, fmt.Sprintf("Ticket %d has already been taken by: %s", ticketcr.TicketID, ticketcr.SupUserName), true)
-		return
-	}
-	staff, err := database.ReadStaffByID(chatID)
-	if err != nil{
-		fmt.Println(err)
+		go func(){
+			time.Sleep(1 * time.Second)
+			StartMenu(chatID, bot, staff)
+		}()
 		return
 	}
 	//editmessageforall()
@@ -254,9 +253,10 @@ func AcceptTicket(chatID int64, bot *tgbotapi.BotAPI, ticketid string){
 		Time: 			ticketcr.Time,
 		ClosingTime: 	0,
 		Language:		ticketcr.Language,
-		Status:			"Open",
+		Status:			"Chat",
 	}
 	ticket.Update()
+	ticket.MapUpdateOrCreate()
 	staff.CurrentTicket = ticketcr.TicketID
 	staff.MapUpdateOrCreate()
 	staff.Update()
@@ -266,7 +266,7 @@ func AcceptTicket(chatID int64, bot *tgbotapi.BotAPI, ticketid string){
 		return
 	}
 	go help.ClearMessages1(chatID, bot)
-	msg := tgbotapi.NewMessage(staff.ChatID, fmt.Sprintf("Ticket info\nID: %d\nUsername: %s\nPrefered language: %s\nOpen time: %s", ticket.TicketID, ticket.UserName, ticket.Language, time.Unix(ticket.Time, 0).Format("2006-01-02 15:04")))
+	msg := tgbotapi.NewMessage(staff.ChatID, fmt.Sprintf("Ticket info\nID: %d\nUsername: %s\nPrefered language: %s\nOpen time: %s\nStatus: %s", ticket.TicketID, ticket.UserName, ticket.Language, time.Unix(ticket.Time, 0).Format("2006-01-02 15:04"), ticket.Status))
 		keyboard := tgbotapi.NewInlineKeyboardMarkup(
 			tgbotapi.NewInlineKeyboardRow(
 				tgbotapi.NewInlineKeyboardButtonData("Close", fmt.Sprintf("Close%d",ticket.TicketID)),
@@ -319,11 +319,11 @@ func CloseTicket(chatID int64, bot *tgbotapi.BotAPI, ticketid string){
 	staff.TicketClosed++
 	staff.CurrentTicket = 0
 	ticket.Update()
-	staff.MapUpdateOrCreate()
+	ticket.MapDelete()
+	staff.MapDelete()
 	staff.Update()
 	if value, exists := database.UserMap[ticket.ChatID]; exists{
-		value.CurrentTicket = 0 
-		value.MapUpdateOrCreate()
+		value.MapDelete()
 		msg := tgbotapi.NewMessage(ticket.ChatID, fmt.Sprintf("Your ticket with ID: %d is closed", ticket.TicketID))
 		keyboard := tgbotapi.NewInlineKeyboardMarkup(
 			tgbotapi.NewInlineKeyboardRow(
@@ -348,6 +348,9 @@ func ViewOpenTickets(chatID int64, bot *tgbotapi.BotAPI){
 		help.NewMessage1(chatID, bot, fmt.Sprintf("Tickets can't load:%v", err), true)
 	}
 	for _, ticket := range tickets{
+		if ticket.Status == "Chat"{
+			continue
+		}
 		msg := tgbotapi.NewMessage(chatID, fmt.Sprintf("Ticket ID:%d, Language:%s\nUserName:%s\nOpen time:%s", ticket.TicketID, ticket.Language, ticket.UserName, time.Unix(ticket.Time, 0).Format("2006-01-02 15:04")))
 		keyboard := tgbotapi.NewInlineKeyboardMarkup(
 			tgbotapi.NewInlineKeyboardRow(

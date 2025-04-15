@@ -62,11 +62,27 @@ func CheckPaymentStatus(bot *tgbotapi.BotAPI, chatID int64, client *cryptobot.Cl
 			if invoice.Status == cryptobot.InvoicePaidStatus {
 				if strconv.FormatInt(invoice.ID, 10)+strconv.FormatInt(chatID, 10) == targetinvoice {
 					go help.ClearMessages(chatID, bot)
+
 					topup, err := strconv.Atoi(invoice.Amount)
 					if err != nil {
 						fmt.Printf("Error convert: %w\n", err)
 					}
+
 					user, _ := database.ReadUserByID(chatID)
+					invoicestruct := database.Invoice{
+						InvoiceID:		invoice.ID,
+						ChatID:			chatID,
+						LinkName:		user.LinkName,
+						Amount:			int64(topup),
+						StringAmount:	invoice.Amount,
+						Asset:			invoice.Asset,
+						PaymentTime:	time.Now().Unix(),
+					}
+					
+					if err := invoicestruct.InsertNew(); err != nil {
+						help.NewMessage(chatID, bot, fmt.Sprintf("Error insert new payment with ID:%d for ChatID:%d with LinkName:%s. Amount:%d (string:%s), Asset:%s, Time:%s\n\nContact us with forward this message.\n\nError: %v", invoicestruct.InvoiceID, chatID, invoicestruct.LinkName, invoicestruct.Amount, invoicestruct.StringAmount, time.Unix(invoicestruct.PaymentTime, 0).Format("2006-01-02 15:04"), err), false)
+					}
+
 					if user != nil{
 						user.Balance = user.Balance + int64(topup)
 						if err := user.Update(); err != nil{
