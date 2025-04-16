@@ -584,7 +584,6 @@ func ReadOpenTickets() ([]*Ticket, error){
 		if err != nil {
 			if err == sql.ErrNoRows{
 				fmt.Println("Ticket not found while reads tickets:",err)
-				continue
 			}
 			fmt.Println("Undefined error while reads tickets:",err)
 		}
@@ -666,7 +665,6 @@ func OutputStaffWithCurrTicketNull() ([]*Staff, error){
 		if err != nil {
 			if err == sql.ErrNoRows{
 				fmt.Println("Staff not found while reads staff:",err)
-				continue
 			}
 			fmt.Println("Undefined error while reads staff:",err)
 		}
@@ -701,7 +699,6 @@ func ReadAllMessagesByTicketID(ticketid int64) ([]*TicketMessage, error){
 		if err != nil {
 			if err == sql.ErrNoRows{
 				fmt.Println("Message not found while reads tickets_messages:",err)
-				continue
 			}
 			fmt.Println("Undefined error while reads tickets_messages:",err)
 		}
@@ -736,7 +733,6 @@ func OutputStaff() ([]*Staff, error){
 		if err != nil {
 			if err == sql.ErrNoRows{
 				fmt.Println("Staff not found while reads staff:",err)
-				continue
 			}
 			fmt.Println("Undefined error while reads staff:",err)
 		}
@@ -775,24 +771,21 @@ func OutputPaymentsByID(chatID int64) ([]*Invoice, error){
 		return nil, err
 	}
 	defer db.Close()
-
 	query := ("SELECT * FROM bookkeeping WHERE chat_id = ?")
 
 	var paymentlist []*Invoice
 
-	rows, err := db.Query(query, 0)
+	rows, err := db.Query(query, chatID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-
 	for rows.Next(){
 		payment := &Invoice{}
 		err := rows.Scan(&payment.InvoiceID, &payment.ChatID, &payment.LinkName, &payment.Amount, &payment.StringAmount, &payment.Asset, &payment.PaymentTime)
 		if err != nil {
 			if err == sql.ErrNoRows{
 				fmt.Println("Payment not found while reads bookkeeping:",err)
-				continue
 			}
 			fmt.Println("Undefined error while reads bookkeeping:",err)
 		}

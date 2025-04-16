@@ -266,7 +266,55 @@ func AcceptTicket(chatID int64, bot *tgbotapi.BotAPI, ticketid string, staff *da
 		return
 	}
 	go help.ClearMessages1(chatID, bot)
-	msg := tgbotapi.NewMessage(staff.ChatID, fmt.Sprintf("Ticket info\nID: %d\nUsername: %s\nPrefered language: %s\nOpen time: %s\nStatus: %s", ticket.TicketID, ticket.UserName, ticket.Language, time.Unix(ticket.Time, 0).Format("2006-01-02 15:04"), ticket.Status))
+
+	payments, err := database.OutputPaymentsByID(ticket.ChatID)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	var resultout string
+	countpayments := 0
+	var asset string
+	var amount string
+	asdfg := false 
+
+	if payments == nil {
+		resultout = "\nPayments: 0"
+	} else {
+		for _, payment := range payments{
+			countpayments++
+			if countpayments == 1 {
+				asset = payment.Asset
+				amount = payment.StringAmount
+				continue
+			}
+			if asset != payment.Asset{
+				asdfg = true
+				asset = fmt.Sprintf("%s, %s", asset, payment.Asset)
+				amount = fmt.Sprintf("%s + %s", amount, payment.StringAmount)
+				continue
+			}		
+			if !asdfg{	
+				qwer, _ := strconv.ParseInt(amount, 10, 64) 
+				amount = strconv.FormatInt(qwer + payment.Amount, 10)
+			} else {
+				asset = fmt.Sprintf("%s, %s", asset, payment.Asset)
+				amount = fmt.Sprintf("%s + %s", amount, payment.StringAmount)
+			}
+		}
+		resultout = fmt.Sprintf("\nPayments:%d\nSpent:%s\nAssets:%s", countpayments, amount, asset)
+	}
+	type Invoice struct{
+		InvoiceID 		int64
+		ChatID 			int64
+		LinkName 		string
+		Amount 			int64
+		StringAmount 	string
+		Asset 			string
+		PaymentTime 	int64
+	}
+
+	msg := tgbotapi.NewMessage(staff.ChatID, fmt.Sprintf("Ticket info\nID: %d\nName: %s\nPrefered language: %s%s\nOpen time: %s", ticket.TicketID, ticket.UserName, ticket.Language, resultout, time.Unix(ticket.Time, 0).Format("2006-01-02 15:04")))
 		keyboard := tgbotapi.NewInlineKeyboardMarkup(
 			tgbotapi.NewInlineKeyboardRow(
 				tgbotapi.NewInlineKeyboardButtonData("Close", fmt.Sprintf("Close%d",ticket.TicketID)),
