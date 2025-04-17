@@ -18,6 +18,30 @@ func AdminStartMenu(chatID int64, bot *tgbotapi.BotAPI){
 			tgbotapi.NewInlineKeyboardButtonData("SupList", "SupList"),
 			tgbotapi.NewInlineKeyboardButtonData("AddSup", "AddSup"),
 		),
+		tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonData("Bookkeep", "BookkeepButton"),
+		),
+	)
+	msg.ReplyMarkup = keyboard
+	sent, err := bot.Send(msg)
+	if err != nil {
+		fmt.Println("Error sending start menu: ", err)
+	}
+	go help.AddToDelete1(sent.Chat.ID, sent.MessageID)	
+}
+
+func AdminBookkeepMenu(chatID int64, bot *tgbotapi.BotAPI){
+	go help.ClearMessages1(chatID, bot)
+	msg := tgbotapi.NewMessage(chatID, "Bookkeep menu. Find payment by:")
+	keyboard := tgbotapi.NewInlineKeyboardMarkup(
+		tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonData("Invoice ID", "BookkeepInvoiceFind"),
+			tgbotapi.NewInlineKeyboardButtonData("Date",	   "BookkeepDateButton"),
+		),
+		tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonData("Back", 	 "adminMenu"),
+			tgbotapi.NewInlineKeyboardButtonData("Chat ID",  "BookkeepChatIDButton"),
+		),
 	)
 	msg.ReplyMarkup = keyboard
 	sent, err := bot.Send(msg)

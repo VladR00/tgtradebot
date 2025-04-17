@@ -148,6 +148,9 @@ func HandleCallBackSwitchForAuthorizedInTableStaff(update tgbotapi.Update, bot *
 		case "Change name":
 			ChangeName(upCQ.Message.Chat.ID, bot, staff)
 			return
+		case "BookkeepButton":
+			AdminBookkeepMenu(upCQ.Message.Chat.ID, bot)
+			return
 	}
 
 	switch {
