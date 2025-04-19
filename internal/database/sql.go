@@ -35,6 +35,8 @@ type Staff struct{
 	Time 			int64
 	AddSup			bool
 	ChangeName		bool
+	FindByInvoice 	bool
+	FindByChatID	bool
 }
 
 type Invoice struct{
@@ -765,6 +767,27 @@ func DeleteStaffByID(chatID int64) (error){
 	return  nil //staff.Time = time.Unix(registrationTime, 0).Format("2006-01-02 15:04")
 }
 
+func OutputPaymentByInvoiceID(invoiceID int64) (*Invoice, error){
+	db, err := OpenDB()
+	if err != nil {
+		return nil, err
+	}
+	defer db.Close()
+	query := ("SELECT * FROM bookkeeping WHERE invoice_id = ?")
+
+	payment := &Invoice{}
+
+	row := db.QueryRow(query, invoiceID)
+	err = row.Scan(&payment.InvoiceID, &payment.ChatID, &payment.LinkName, &payment.Amount, &payment.StringAmount, &payment.Asset, &payment.PaymentTime)
+		if err != nil {
+			if err == sql.ErrNoRows{
+				return nil, fmt.Errorf("Payment not found while reads bookkeeping: %w",err)
+			}
+			return nil, fmt.Errorf("Undefined error while reads bookkeeping: %w",err)
+		}
+	return payment, nil //staff.Time = time.Unix(registrationTime, 0).Format("2006-01-02 15:04")
+}
+
 func OutputPaymentsByID(chatID int64) ([]*Invoice, error){
 	db, err := OpenDB()
 	if err != nil {
@@ -774,7 +797,7 @@ func OutputPaymentsByID(chatID int64) ([]*Invoice, error){
 	query := ("SELECT * FROM bookkeeping WHERE chat_id = ?")
 
 	var paymentlist []*Invoice
-
+	fmt.Println(chatID)
 	rows, err := db.Query(query, chatID)
 	if err != nil {
 		return nil, err
@@ -784,10 +807,12 @@ func OutputPaymentsByID(chatID int64) ([]*Invoice, error){
 		payment := &Invoice{}
 		err := rows.Scan(&payment.InvoiceID, &payment.ChatID, &payment.LinkName, &payment.Amount, &payment.StringAmount, &payment.Asset, &payment.PaymentTime)
 		if err != nil {
+			fmt.Println(err)
+			fmt.Println("err")
 			if err == sql.ErrNoRows{
-				fmt.Println("Payment not found while reads bookkeeping:",err)
+				return nil, fmt.Errorf("Payment not found while reads bookkeeping: %w", err)
 			}
-			fmt.Println("Undefined error while reads bookkeeping:",err)
+			return nil, fmt.Errorf("Undefined error while reads bookkeeping: %w", err)
 		}
 		paymentlist = append(paymentlist, payment)
 	}

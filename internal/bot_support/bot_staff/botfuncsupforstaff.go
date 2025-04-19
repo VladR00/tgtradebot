@@ -26,7 +26,35 @@ func HandleMessageSwitchForAuthorizedInTableStaff(update tgbotapi.Update, bot *t
 	fmt.Println(database.StaffMap)
 	fmt.Println(database.TicketMap)
 	if value, exists := database.StaffMap[upM.Chat.ID]; exists{
-		if (value.AddSup){
+		if (value.CurrentTicket != 0){
+			message := database.TicketMessage{
+				TicketID:	value.CurrentTicket,
+				Support:	1,
+				ChatID:		value.ChatID,
+				UserName:	value.UserName,
+				MessageID:	upM.MessageID,
+				Time:		time.Now().Unix(),		
+			}
+			if err := message.InsertNew(); err != nil{
+				fmt.Println(err)
+				help.NewMessage(value.ChatID, bot, fmt.Sprintf("%v", err),false)
+				return
+			}
+			ticket, err := database.ReadTicketByID(value.CurrentTicket)
+			if err != nil {
+				fmt.Println(err)
+				help.NewMessage(value.ChatID, bot, fmt.Sprintf("%v", err),false)
+				return
+			}
+			msg := tgbotapi.NewCopyMessage(ticket.ChatID, message.ChatID, message.MessageID)
+			sent, err := bot.Send(msg)
+			if err != nil {
+				fmt.Println("Error sending: ", err)
+			} else {
+				go help.AddToDelete1(ticket.ChatID, sent.MessageID)
+			}
+			return
+		} else if (value.AddSup){
 			id, _ := strconv.ParseInt(upM.Text, 10, 64)
 			if id == 0 {
 				help.NewMessage1(upM.Chat.ID, bot, fmt.Sprintf("Wrong ChatID: %d. Try another one", id), true)
@@ -76,36 +104,116 @@ func HandleMessageSwitchForAuthorizedInTableStaff(update tgbotapi.Update, bot *t
 			}
 			go help.AddToDelete1(sent.Chat.ID, sent.MessageID)	
 			return
-		} else if (value.CurrentTicket != 0){
-			message := database.TicketMessage{
-				TicketID:	value.CurrentTicket,
-				Support:	1,
-				ChatID:		value.ChatID,
-				UserName:	value.UserName,
-				MessageID:	upM.MessageID,
-				Time:		time.Now().Unix(),		
-			}
-			if err := message.InsertNew(); err != nil{
-				fmt.Println(err)
-				help.NewMessage(value.ChatID, bot, fmt.Sprintf("%v", err),false)
+		} else if (value.FindByInvoice){
+			go help.ClearMessages1(upM.Chat.ID, bot)
+			id, _ := strconv.ParseInt(upM.Text, 10, 64)
+			
+			if id == 0 {
+				msg := tgbotapi.NewMessage(upM.Chat.ID, fmt.Sprintf("Wrong InvoiceID: %d. Try another one", id))
+				keyboard := tgbotapi.NewInlineKeyboardMarkup(
+					tgbotapi.NewInlineKeyboardRow(
+						tgbotapi.NewInlineKeyboardButtonData("Back", "AdminBackToMenuWithoutChanges"),
+					),
+				)
+				msg.ReplyMarkup = keyboard
+				sent, err := bot.Send(msg)
+				if err != nil {
+					fmt.Println("Error sending start menu: ", err)
+				}
+				go help.AddToDelete1(sent.Chat.ID, sent.MessageID)	
 				return
 			}
-			ticket, err := database.ReadTicketByID(value.CurrentTicket)
+			payment, err := database.OutputPaymentByInvoiceID(id)
 			if err != nil {
-				fmt.Println(err)
-				help.NewMessage(value.ChatID, bot, fmt.Sprintf("%v", err),false)
+				msg := tgbotapi.NewMessage(upM.Chat.ID, fmt.Sprintf("Error: %v", err))
+				keyboard := tgbotapi.NewInlineKeyboardMarkup(
+					tgbotapi.NewInlineKeyboardRow(
+						tgbotapi.NewInlineKeyboardButtonData("Back", "AdminBackToMenuWithoutChanges"),
+					),
+				)
+				msg.ReplyMarkup = keyboard
+				sent, err := bot.Send(msg)
+				if err != nil {
+					fmt.Println("Error sending start menu: ", err)
+				}
+				go help.AddToDelete1(sent.Chat.ID, sent.MessageID)	
 				return
 			}
-			msg := tgbotapi.NewCopyMessage(ticket.ChatID, message.ChatID, message.MessageID)
+
+			msg := tgbotapi.NewMessage(upM.Chat.ID, fmt.Sprintf("Payment info\n\nInvoiceID: %d\nChatID: %d\nLink: %s\nAmount: %d\nAsset: %s\nTime: %s", payment.InvoiceID, payment.ChatID, payment.LinkName, payment.Amount, payment.Asset, time.Unix(payment.PaymentTime, 0).Format("2006-01-02 15:04")))
+			keyboard := tgbotapi.NewInlineKeyboardMarkup(
+				tgbotapi.NewInlineKeyboardRow(
+					tgbotapi.NewInlineKeyboardButtonData("Back", "AdminBackToMenuWithoutChanges"),
+				),
+			)
+			msg.ReplyMarkup = keyboard
 			sent, err := bot.Send(msg)
 			if err != nil {
-				fmt.Println("Error sending: ", err)
-			} else {
-				go help.AddToDelete1(ticket.ChatID, sent.MessageID)
+				fmt.Println("Error sending start menu: ", err)
 			}
+			go help.AddToDelete1(sent.Chat.ID, sent.MessageID)	
 			return
+		} else if (value.FindByChatID) {
+			go help.ClearMessages1(upM.Chat.ID, bot)
+			id, _ := strconv.ParseInt(upM.Text, 10, 64)
+			
+			if id == 0 {
+				msg := tgbotapi.NewMessage(upM.Chat.ID, fmt.Sprintf("Wrong ChatID: %d. Try another one", id))
+				keyboard := tgbotapi.NewInlineKeyboardMarkup(
+					tgbotapi.NewInlineKeyboardRow(
+						tgbotapi.NewInlineKeyboardButtonData("Back", "AdminBackToMenuWithoutChanges"),
+					),
+				)
+				msg.ReplyMarkup = keyboard
+				sent, err := bot.Send(msg)
+				if err != nil {
+					fmt.Println("Error sending start menu: ", err)
+				}
+				go help.AddToDelete1(sent.Chat.ID, sent.MessageID)	
+				return
+			}
+
+			payments, err := database.OutputPaymentsByID(id)
+			if err != nil { 
+				msg := tgbotapi.NewMessage(upM.Chat.ID, fmt.Sprintf("Error: %v", err))
+				keyboard := tgbotapi.NewInlineKeyboardMarkup(
+					tgbotapi.NewInlineKeyboardRow(
+						tgbotapi.NewInlineKeyboardButtonData("Back", "AdminBackToMenuWithoutChanges"),
+					),
+				)
+				msg.ReplyMarkup = keyboard
+				sent, err := bot.Send(msg)
+				if err != nil {
+					fmt.Println("Error sending start menu: ", err)
+				}
+				go help.AddToDelete1(sent.Chat.ID, sent.MessageID)	
+				return
+			}
+
+			var DefaultKeyboard [][]tgbotapi.InlineKeyboardButton
+			msg := tgbotapi.NewMessage(upM.Chat.ID, fmt.Sprintf("User payment list with ID: %d", id))
+
+			for _, payment := range payments{
+				payment1 := []tgbotapi.InlineKeyboardButton{
+					tgbotapi.NewInlineKeyboardButtonData(fmt.Sprintf("%d %s : %s",payment.Amount, payment.Asset, time.Unix(payment.PaymentTime, 0).Format("2006-01-02 15:04")) , fmt.Sprintf("PaymentID%d", payment.InvoiceID)),
+				}
+				DefaultKeyboard = append(DefaultKeyboard, payment1)					
+			}
+					
+			back := []tgbotapi.InlineKeyboardButton{
+				tgbotapi.NewInlineKeyboardButtonData("Back", "AdminBackToMenuWithoutChanges"),
+			}
+			DefaultKeyboard = append(DefaultKeyboard, back)
+			keyboard := tgbotapi.NewInlineKeyboardMarkup(DefaultKeyboard...)
+			msg.ReplyMarkup = keyboard
+			sent, err := bot.Send(msg)
+			if err != nil {
+				fmt.Println("Error sending start menu: ", err)
+			}
+			go help.AddToDelete1(sent.Chat.ID, sent.MessageID)	
 		}
 	}
+	
 	switch upM.Text {
 		case "/start":
 			StartMenu(upM.Chat.ID, bot, staff)
@@ -147,9 +255,15 @@ func HandleCallBackSwitchForAuthorizedInTableStaff(update tgbotapi.Update, bot *
 			return
 		case "Change name":
 			ChangeName(upCQ.Message.Chat.ID, bot, staff)
-			return
+			return 
 		case "BookkeepButton":
 			AdminBookkeepMenu(upCQ.Message.Chat.ID, bot)
+			return
+		case "BookkeepInvoiceFind":
+			AdminBookkeepFindByInvoiceButton(upCQ.Message.Chat.ID, bot, staff)
+			return
+		case "BookkeepChatIDFind":
+			AdminBookkeepFindByChatIDButton(upCQ.Message.Chat.ID, bot, staff)
 			return
 	}
 
@@ -164,6 +278,8 @@ func HandleCallBackSwitchForAuthorizedInTableStaff(update tgbotapi.Update, bot *
 			AdminRemoveButton(upCQ.Message.Chat.ID, bot, strings.TrimPrefix(upCQ.Data, "RemoveButton"))
 		case strings.HasPrefix(upCQ.Data, "Remove"):
 			AdminRemove(upCQ.Message.Chat.ID, bot, strings.TrimPrefix(upCQ.Data, "Remove"))
+		case strings.HasPrefix(upCQ.Data, "PaymentID"):
+			AdminPaymentInfo(upCQ.Message.Chat.ID, bot, strings.TrimPrefix(upCQ.Data, "PaymentID"))
 	}
 }	
 
