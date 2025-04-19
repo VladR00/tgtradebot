@@ -797,12 +797,17 @@ func OutputPaymentsByID(chatID int64) ([]*Invoice, error){
 	query := ("SELECT * FROM bookkeeping WHERE chat_id = ?")
 
 	var paymentlist []*Invoice
-	fmt.Println(chatID)
+
 	rows, err := db.Query(query, chatID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
+
+	if !rows.Next() {
+		return nil, fmt.Errorf("Payment not found while reads bookkeeping")
+	}
+
 	for rows.Next(){
 		payment := &Invoice{}
 		err := rows.Scan(&payment.InvoiceID, &payment.ChatID, &payment.LinkName, &payment.Amount, &payment.StringAmount, &payment.Asset, &payment.PaymentTime)
@@ -813,6 +818,40 @@ func OutputPaymentsByID(chatID int64) ([]*Invoice, error){
 				return nil, fmt.Errorf("Payment not found while reads bookkeeping: %w", err)
 			}
 			return nil, fmt.Errorf("Undefined error while reads bookkeeping: %w", err)
+		}
+		paymentlist = append(paymentlist, payment)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return paymentlist, nil //staff.Time = time.Unix(registrationTime, 0).Format("2006-01-02 15:04")
+}
+
+func OutputPayedIDs() ([]*Invoice, error){
+	db, err := OpenDB()
+	if err != nil {
+		return nil, err
+	}
+	defer db.Close()
+
+	query := ("SELECT DISTINCT chat_id FROM bookkeeping")
+
+	var paymentlist []*Invoice
+
+	rows, err := db.Query(query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next(){
+		payment := &Invoice{}
+		err := rows.Scan(&payment.ChatID)
+		if err != nil {
+			if err == sql.ErrNoRows{
+				fmt.Println("Payment not found while reads bookkeeping",err)
+			}
+			fmt.Println("Undefined error while reads bookkeeping:",err)
 		}
 		paymentlist = append(paymentlist, payment)
 	}
