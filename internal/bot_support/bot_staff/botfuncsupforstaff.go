@@ -123,35 +123,7 @@ func HandleMessageSwitchForAuthorizedInTableStaff(update tgbotapi.Update, bot *t
 				go help.AddToDelete1(sent.Chat.ID, sent.MessageID)	
 				return
 			}
-			payment, err := database.OutputPaymentByInvoiceID(id)
-			if err != nil {
-				msg := tgbotapi.NewMessage(upM.Chat.ID, fmt.Sprintf("Error: %v", err))
-				keyboard := tgbotapi.NewInlineKeyboardMarkup(
-					tgbotapi.NewInlineKeyboardRow(
-						tgbotapi.NewInlineKeyboardButtonData("Back", "AdminBackToMenuWithoutChanges"),
-					),
-				)
-				msg.ReplyMarkup = keyboard
-				sent, err := bot.Send(msg)
-				if err != nil {
-					fmt.Println("Error sending start menu: ", err)
-				}
-				go help.AddToDelete1(sent.Chat.ID, sent.MessageID)	
-				return
-			}
-
-			msg := tgbotapi.NewMessage(upM.Chat.ID, fmt.Sprintf("Payment info\n\nInvoiceID: %d\nChatID: %d\nLink: %s\nAmount: %d\nAsset: %s\nTime: %s", payment.InvoiceID, payment.ChatID, payment.LinkName, payment.Amount, payment.Asset, time.Unix(payment.PaymentTime, 0).Format("2006-01-02 15:04")))
-			keyboard := tgbotapi.NewInlineKeyboardMarkup(
-				tgbotapi.NewInlineKeyboardRow(
-					tgbotapi.NewInlineKeyboardButtonData("Back", "AdminBackToMenuWithoutChanges"),
-				),
-			)
-			msg.ReplyMarkup = keyboard
-			sent, err := bot.Send(msg)
-			if err != nil {
-				fmt.Println("Error sending start menu: ", err)
-			}
-			go help.AddToDelete1(sent.Chat.ID, sent.MessageID)	
+			AdminBookkeepFindByInvoiceID(upM.Chat.ID, bot, upM.Text)
 			return
 		} else if (value.FindByChatID) {
 			go help.ClearMessages1(upM.Chat.ID, bot)
@@ -173,7 +145,7 @@ func HandleMessageSwitchForAuthorizedInTableStaff(update tgbotapi.Update, bot *t
 				return
 			}
 
-			AdminPaymentInfoUserID(upM.Chat.ID, bot, upM.Text)
+			AdminPaymentInfoUserListID(upM.Chat.ID, bot, upM.Text)
 		}
 	}
 	
@@ -222,8 +194,14 @@ func HandleCallBackSwitchForAuthorizedInTableStaff(update tgbotapi.Update, bot *
 		case "BookkeepButton":
 			AdminBookkeepMenu(upCQ.Message.Chat.ID, bot)
 			return
+		case "BookkeepInvoiceButton":
+			AdminBookkeepFindByInvoiceButton(upCQ.Message.Chat.ID, bot)
+			return
 		case "BookkeepInvoiceFind":
-			AdminBookkeepFindByInvoiceButton(upCQ.Message.Chat.ID, bot, staff)
+			AdminBookkeepFindByInvoiceFindButton(upCQ.Message.Chat.ID, bot, staff)
+			return
+		case "BookkeepInvoiceList":
+			AdminBookkeepFindByInvoiceList(upCQ.Message.Chat.ID, bot)
 			return
 		case "BookkeepChatIDButton":
 			AdminBookkeepFindByChatIDButton(upCQ.Message.Chat.ID, bot)
@@ -250,7 +228,9 @@ func HandleCallBackSwitchForAuthorizedInTableStaff(update tgbotapi.Update, bot *
 		case strings.HasPrefix(upCQ.Data, "PaymentID"): 
 			AdminPaymentInfoID(upCQ.Message.Chat.ID, bot, strings.TrimPrefix(upCQ.Data, "PaymentID"))
 		case strings.HasPrefix(upCQ.Data, "PaymentChatID"): 
-			AdminPaymentInfoUserID(upCQ.Message.Chat.ID, bot, strings.TrimPrefix(upCQ.Data, "PaymentChatID"))
+			AdminPaymentInfoUserListID(upCQ.Message.Chat.ID, bot, strings.TrimPrefix(upCQ.Data, "PaymentChatID"))
+		case strings.HasPrefix(upCQ.Data, "PaymentInvoiceID"): 
+			AdminBookkeepFindByInvoiceID(upCQ.Message.Chat.ID, bot, strings.TrimPrefix(upCQ.Data, "PaymentInvoiceID"))
 	}
 }	
 

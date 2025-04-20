@@ -804,25 +804,23 @@ func OutputPaymentsByID(chatID int64) ([]*Invoice, error){
 	}
 	defer rows.Close()
 
-	if !rows.Next() {
-		return nil, fmt.Errorf("Payment not found while reads bookkeeping")
-	}
+	// if !rows.Next() {
+	// 	return nil, fmt.Errorf("Payment not found while reads bookkeeping")
+	// }
 
 	for rows.Next(){
 		payment := &Invoice{}
 		err := rows.Scan(&payment.InvoiceID, &payment.ChatID, &payment.LinkName, &payment.Amount, &payment.StringAmount, &payment.Asset, &payment.PaymentTime)
 		if err != nil {
-			fmt.Println(err)
-			fmt.Println("err")
-			if err == sql.ErrNoRows{
-				return nil, fmt.Errorf("Payment not found while reads bookkeeping: %w", err)
-			}
 			return nil, fmt.Errorf("Undefined error while reads bookkeeping: %w", err)
 		}
 		paymentlist = append(paymentlist, payment)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
+	}
+	if len(paymentlist) == 0 {
+		return nil, fmt.Errorf("Payment not found while reading bookkeeping")
 	}
 	return paymentlist, nil //staff.Time = time.Unix(registrationTime, 0).Format("2006-01-02 15:04")
 }
@@ -847,6 +845,40 @@ func OutputPayedIDs() ([]*Invoice, error){
 	for rows.Next(){
 		payment := &Invoice{}
 		err := rows.Scan(&payment.ChatID)
+		if err != nil {
+			if err == sql.ErrNoRows{
+				fmt.Println("Payment not found while reads bookkeeping",err)
+			}
+			fmt.Println("Undefined error while reads bookkeeping:",err)
+		}
+		paymentlist = append(paymentlist, payment)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return paymentlist, nil //staff.Time = time.Unix(registrationTime, 0).Format("2006-01-02 15:04")
+}
+
+func OutputInvoices() ([]*Invoice, error){
+	db, err := OpenDB()
+	if err != nil {
+		return nil, err
+	}
+	defer db.Close()
+
+	query := ("SELECT invoice_id, chat_id FROM bookkeeping")
+
+	var paymentlist []*Invoice
+
+	rows, err := db.Query(query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next(){
+		payment := &Invoice{}
+		err := rows.Scan(&payment.InvoiceID, &payment.ChatID) //
 		if err != nil {
 			if err == sql.ErrNoRows{
 				fmt.Println("Payment not found while reads bookkeeping",err)

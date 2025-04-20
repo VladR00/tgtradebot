@@ -35,7 +35,7 @@ func AdminBookkeepMenu(chatID int64, bot *tgbotapi.BotAPI){
 	msg := tgbotapi.NewMessage(chatID, "Bookkeep menu. Find payment by:")
 	keyboard := tgbotapi.NewInlineKeyboardMarkup(
 		tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonData("Invoice ID", "BookkeepInvoiceFind"),
+			tgbotapi.NewInlineKeyboardButtonData("Invoice ID",  "BookkeepInvoiceButton"),
 			tgbotapi.NewInlineKeyboardButtonData("Chat ID",  	"BookkeepChatIDButton"),
 		),
 		tgbotapi.NewInlineKeyboardRow(
@@ -220,7 +220,79 @@ func AdminRemove(chatID int64, bot *tgbotapi.BotAPI, supID string){
 	go help.ClearMessages1(id, bot)
 }
 
-func AdminBookkeepFindByInvoiceButton(chatID int64, bot *tgbotapi.BotAPI, staff *database.Staff){
+func AdminBookkeepFindByInvoiceButton(chatID int64, bot *tgbotapi.BotAPI){
+	go help.ClearMessages1(chatID, bot)
+
+	msg := tgbotapi.NewMessage(chatID, "Choose search option")
+	keyboard := tgbotapi.NewInlineKeyboardMarkup(
+		tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonData("List InvoiceID", "BookkeepInvoiceList"),
+			tgbotapi.NewInlineKeyboardButtonData("Write InvoiceID", "BookkeepInvoiceFind"),
+		),
+		tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonData("Back", "BookkeepButton"),
+		),
+	)
+	msg.ReplyMarkup = keyboard
+	sent, err := bot.Send(msg)
+	if err != nil {
+		fmt.Println("Error sending start menu: ", err)
+	}
+	go help.AddToDelete1(sent.Chat.ID, sent.MessageID)
+}
+
+func AdminBookkeepFindByInvoiceList(chatID int64, bot *tgbotapi.BotAPI){
+	go help.ClearMessages1(chatID, bot)
+
+	users, err := database.OutputInvoices()
+	if err != nil {
+		msg := tgbotapi.NewMessage(chatID, fmt.Sprintf("Error: %v", err))
+		keyboard := tgbotapi.NewInlineKeyboardMarkup(
+			tgbotapi.NewInlineKeyboardRow(
+				tgbotapi.NewInlineKeyboardButtonData("Back", "BookkeepInvoiceButton"),
+			),
+		)
+		msg.ReplyMarkup = keyboard
+		sent, err := bot.Send(msg)
+		if err != nil {
+			fmt.Println("Error sending start menu: ", err)
+		}
+		go help.AddToDelete1(sent.Chat.ID, sent.MessageID)	
+		return
+	}
+
+	var DefaultKeyboard [][]tgbotapi.InlineKeyboardButton
+	msg := tgbotapi.NewMessage(chatID, "Payed invoice list")
+
+	var row []tgbotapi.InlineKeyboardButton
+
+	for _, user := range users{
+		user := tgbotapi.NewInlineKeyboardButtonData(fmt.Sprintf("%d: %d", user.InvoiceID, user.ChatID), fmt.Sprintf("PaymentInvoiceID%d", user.InvoiceID))
+		row = append(row, user)
+
+		if len(row) == 2 {
+			DefaultKeyboard = append(DefaultKeyboard, row)	
+			row = []tgbotapi.InlineKeyboardButton{}
+		}
+	}
+	if len(row) > 0 {
+		DefaultKeyboard = append(DefaultKeyboard, row)
+	}
+
+	back := []tgbotapi.InlineKeyboardButton{
+		tgbotapi.NewInlineKeyboardButtonData("Back", "BookkeepInvoiceButton"),
+	}
+	DefaultKeyboard = append(DefaultKeyboard, back)
+	keyboard := tgbotapi.NewInlineKeyboardMarkup(DefaultKeyboard...)
+	msg.ReplyMarkup = keyboard
+	sent, err := bot.Send(msg)
+	if err != nil {
+		fmt.Println("Error sending start menu: ", err)
+	}
+	go help.AddToDelete1(sent.Chat.ID, sent.MessageID)	
+}
+
+func AdminBookkeepFindByInvoiceFindButton(chatID int64, bot *tgbotapi.BotAPI, staff *database.Staff){
 	go help.ClearMessages1(chatID, bot)
 	staff.FindByInvoice = true
 	staff.MapUpdateOrCreate()
@@ -352,7 +424,7 @@ func AdminBookkeepFindByChatIDList(chatID int64, bot *tgbotapi.BotAPI){
 	go help.AddToDelete1(sent.Chat.ID, sent.MessageID)	
 }
 
-func AdminPaymentInfoUserID(chatID int64, bot *tgbotapi.BotAPI, idd string){
+func AdminPaymentInfoUserListID(chatID int64, bot *tgbotapi.BotAPI, idd string){
 	help.ClearMessages1(chatID, bot)
 	id, _ := strconv.ParseInt(idd, 10, 64)
 	payments, err := database.OutputPaymentsByID(id)
@@ -380,7 +452,7 @@ func AdminPaymentInfoUserID(chatID int64, bot *tgbotapi.BotAPI, idd string){
 
 	for _, payment := range payments{
 		payment1 := []tgbotapi.InlineKeyboardButton{
-			tgbotapi.NewInlineKeyboardButtonData(fmt.Sprintf("%d %s : %s",payment.Amount, payment.Asset, time.Unix(payment.PaymentTime, 0).Format("2006-01-02 15:04")) , fmt.Sprintf("PaymentID%d", payment.InvoiceID)),
+			tgbotapi.NewInlineKeyboardButtonData(fmt.Sprintf("%d %s : %s",payment.Amount, payment.Asset, time.Unix(payment.PaymentTime, 0).Format("2006.01.02 15:04")) , fmt.Sprintf("PaymentID%d", payment.InvoiceID)),
 		}
 		DefaultKeyboard = append(DefaultKeyboard, payment1)					
 	}
@@ -396,4 +468,38 @@ func AdminPaymentInfoUserID(chatID int64, bot *tgbotapi.BotAPI, idd string){
 		fmt.Println("Error sending start menu: ", err)
 	}
 	go help.AddToDelete1(sent.Chat.ID, sent.MessageID)
+}
+
+func AdminBookkeepFindByInvoiceID(chatID int64, bot *tgbotapi.BotAPI, idd string){
+	id, _ := strconv.ParseInt(idd, 10, 64)
+
+	payment, err := database.OutputPaymentByInvoiceID(id)
+	if err != nil {
+		msg := tgbotapi.NewMessage(chatID, fmt.Sprintf("Error: %v", err))
+		keyboard := tgbotapi.NewInlineKeyboardMarkup(
+			tgbotapi.NewInlineKeyboardRow(
+				tgbotapi.NewInlineKeyboardButtonData("Back", "BookkeepInvoiceButton"),
+			),
+		)
+		msg.ReplyMarkup = keyboard
+		sent, err := bot.Send(msg)
+		if err != nil {
+			fmt.Println("Error sending start menu: ", err)
+		}
+		go help.AddToDelete1(sent.Chat.ID, sent.MessageID)	
+		return
+	}
+
+	msg := tgbotapi.NewMessage(chatID, fmt.Sprintf("Payment info\n\nInvoiceID: %d\nChatID: %d\nLink: %s\nAmount: %d\nAsset: %s\nTime: %s", payment.InvoiceID, payment.ChatID, payment.LinkName, payment.Amount, payment.Asset, time.Unix(payment.PaymentTime, 0).Format("2006-01-02 15:04")))
+	keyboard := tgbotapi.NewInlineKeyboardMarkup(
+		tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonData("Back", "BookkeepInvoiceButton"),
+		),
+	)
+	msg.ReplyMarkup = keyboard
+	sent, err := bot.Send(msg)
+	if err != nil {
+		fmt.Println("Error sending start menu: ", err)
+	}
+	go help.AddToDelete1(sent.Chat.ID, sent.MessageID)	
 }
