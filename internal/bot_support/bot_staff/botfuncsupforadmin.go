@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strconv"
 	"time"
+	"strings"
 
 	database "tgbottrade/internal/database"
 	help 	 "tgbottrade/pkg/api/help"
@@ -329,7 +330,7 @@ func AdminBookkeepFindByChatIDFind(chatID int64, bot *tgbotapi.BotAPI, staff *da
 	go help.AddToDelete1(sent.Chat.ID, sent.MessageID)	
 }
 func AdminPaymentInfoID(chatID int64, bot *tgbotapi.BotAPI, invoiceID string){
-	go help.ClearMessages1(chatID, bot)
+	//go help.ClearMessages1(chatID, bot)
 	id, _ := strconv.ParseInt(invoiceID, 10, 64)
 
 	payment, err := database.OutputPaymentByInvoiceID(id)
@@ -502,4 +503,206 @@ func AdminBookkeepFindByInvoiceID(chatID int64, bot *tgbotapi.BotAPI, idd string
 		fmt.Println("Error sending start menu: ", err)
 	}
 	go help.AddToDelete1(sent.Chat.ID, sent.MessageID)	
+}
+
+func AdminBookkeepDateButton(chatID int64, bot *tgbotapi.BotAPI){
+	help.ClearMessages1(chatID, bot)
+	invoices, err := database.OutputInvoices()
+	if err != nil {
+		help.NewMessage1(chatID, bot, fmt.Sprintf("Error outputing invoices: %v", err), true)
+		return
+	}
+	var years []int
+	var lyear	int
+	count := 0 
+	for _, invoice := range invoices{
+		count++
+		year, _, _ := time.Unix(invoice.PaymentTime, 0).Date()
+		if count == 1 {
+			lyear = year
+			years = append(years, year)
+			continue
+		}
+		if lyear == year{
+			continue
+		} else {
+			lyear = year
+			years = append(years, year)
+		}
+	}
+
+	var DefaultKeyboard [][]tgbotapi.InlineKeyboardButton
+	msg := tgbotapi.NewMessage(chatID, "Years with profit:")
+
+	for _, newyear := range years{
+		year1 := []tgbotapi.InlineKeyboardButton{
+			tgbotapi.NewInlineKeyboardButtonData(fmt.Sprintf("%d", newyear), fmt.Sprintf("DateListMonthOf%d", newyear)),
+		}
+		DefaultKeyboard = append(DefaultKeyboard, year1)					
+	}
+			
+	back := []tgbotapi.InlineKeyboardButton{
+		tgbotapi.NewInlineKeyboardButtonData("Back", "BookkeepButton"),
+	}
+	DefaultKeyboard = append(DefaultKeyboard, back)
+	keyboard := tgbotapi.NewInlineKeyboardMarkup(DefaultKeyboard...)
+	msg.ReplyMarkup = keyboard
+	sent, err := bot.Send(msg)
+	if err != nil {
+		fmt.Println("Error sending start menu: ", err)
+	}
+	go help.AddToDelete1(sent.Chat.ID, sent.MessageID)
+}
+
+func AdminBookkeepDateListMonth(chatID int64, bot *tgbotapi.BotAPI, yea string){
+	year, _ := strconv.Atoi(yea)
+	if year == 0 {
+		fmt.Println("Error convertation")
+		return
+	}
+	invoices, err := database.OutputInvoices()
+	if err != nil {
+		help.NewMessage1(chatID, bot, fmt.Sprintf("Error outputing invoices: %v", err), true)
+		return
+	}
+
+	var months []int
+	var lmonth	int
+	count := 0 
+	for _, invoice := range invoices{
+		yearr, month, _ := time.Unix(invoice.PaymentTime, 0).Date()
+		if year != yearr{
+			continue
+		}
+		count++
+		if count == 1 {
+			lmonth = int(month)
+			months = append(months, int(month))
+			continue
+		}
+		if lmonth == int(month){
+			continue
+		} else {
+			lmonth = int(month)
+			months = append(months, int(month))
+		}
+	}
+
+	var DefaultKeyboard [][]tgbotapi.InlineKeyboardButton
+	msg := tgbotapi.NewMessage(chatID, fmt.Sprintf("Months with profit in %s:", yea))
+
+	for _, newmonth := range months{
+		month1 := []tgbotapi.InlineKeyboardButton{
+			tgbotapi.NewInlineKeyboardButtonData(fmt.Sprintf("%s (%d)",time.Month(newmonth), newmonth), fmt.Sprintf("DateListDayOf%s:%d", yea, newmonth)),
+		}
+		DefaultKeyboard = append(DefaultKeyboard, month1)					
+	}
+			
+	back := []tgbotapi.InlineKeyboardButton{
+		tgbotapi.NewInlineKeyboardButtonData("Back", "BookkeepDateButton"),
+	}
+	DefaultKeyboard = append(DefaultKeyboard, back)
+	keyboard := tgbotapi.NewInlineKeyboardMarkup(DefaultKeyboard...)
+	msg.ReplyMarkup = keyboard
+	sent, err := bot.Send(msg)
+	if err != nil {
+		fmt.Println("Error sending start menu: ", err)
+	}
+	go help.AddToDelete1(sent.Chat.ID, sent.MessageID)
+}
+
+func AdminBookkeepDateListDay(chatID int64, bot *tgbotapi.BotAPI, data string){
+	confirmeddata := strings.Split(data, ":")
+	year, _ := strconv.Atoi(confirmeddata[0]) 
+	month, _ := strconv.Atoi(confirmeddata[1])
+
+	invoices, err := database.OutputInvoices()
+	if err != nil {
+		help.NewMessage1(chatID, bot, fmt.Sprintf("Error outputing invoices: %v", err), true)
+		return
+	}
+
+	var days []int
+	var lday   int
+	count := 0 
+	for _, invoice := range invoices{
+		year1, month1, day := time.Unix(invoice.PaymentTime, 0).Date()
+		if year1 != year && month != int(month1){
+			continue
+		}
+		count++
+		if count == 1 {
+			lday = day
+			days = append(days, day)
+			continue
+		}
+		if lday == day{
+			continue
+		} else {
+			lday = day
+			days = append(days, day)
+		}
+	}
+
+	var DefaultKeyboard [][]tgbotapi.InlineKeyboardButton
+	msg := tgbotapi.NewMessage(chatID, fmt.Sprintf("Days with profit in %d.%d:", year, month))
+
+	for _, newday := range days{
+		day1 := []tgbotapi.InlineKeyboardButton{
+			tgbotapi.NewInlineKeyboardButtonData(fmt.Sprintf("%d", newday), fmt.Sprintf("DateListInvoiceOf%d:%d:%d", year, month, newday)),
+		}
+		DefaultKeyboard = append(DefaultKeyboard, day1)					
+	}
+			
+	back := []tgbotapi.InlineKeyboardButton{
+		tgbotapi.NewInlineKeyboardButtonData("Back", fmt.Sprintf("DateListMonthOf%d",year)),
+	}
+	DefaultKeyboard = append(DefaultKeyboard, back)
+	keyboard := tgbotapi.NewInlineKeyboardMarkup(DefaultKeyboard...)
+	msg.ReplyMarkup = keyboard
+	sent, err := bot.Send(msg)
+	if err != nil {
+		fmt.Println("Error sending start menu: ", err)
+	}
+	go help.AddToDelete1(sent.Chat.ID, sent.MessageID)
+}
+
+func AdminBookkeepDateListInvoice(chatID int64, bot *tgbotapi.BotAPI, data string){
+	confirmeddata := strings.Split(data, ":")
+	year, _ := strconv.Atoi(confirmeddata[0]) 
+	month, _ := strconv.Atoi(confirmeddata[1])
+	day, _ := strconv.Atoi(confirmeddata[2])
+
+	invoices, err := database.OutputInvoices()
+	if err != nil {
+		help.NewMessage1(chatID, bot, fmt.Sprintf("Error outputing invoices: %v", err), true)
+		return
+	}
+
+	var DefaultKeyboard [][]tgbotapi.InlineKeyboardButton
+	msg := tgbotapi.NewMessage(chatID, fmt.Sprintf("Profit in %d.%d.%d:", year, month, day))
+
+	for _, invoice := range invoices{
+		year1, month1, day1 := time.Unix(invoice.PaymentTime, 0).Date()
+		if year1 != year && month != int(month1) && day != day1{
+			continue
+		}
+		hour, min, _ := time.Unix(invoice.PaymentTime, 0).Clock()
+		pay := []tgbotapi.InlineKeyboardButton{
+			tgbotapi.NewInlineKeyboardButtonData(fmt.Sprintf("%d:%d", hour, min), fmt.Sprintf("PaymentID%d", invoice.InvoiceID)),
+		}
+		DefaultKeyboard = append(DefaultKeyboard, pay)	
+	}
+
+	back := []tgbotapi.InlineKeyboardButton{
+		tgbotapi.NewInlineKeyboardButtonData("Back", fmt.Sprintf("DateListDayOf%s",data)),
+	}
+	DefaultKeyboard = append(DefaultKeyboard, back)
+	keyboard := tgbotapi.NewInlineKeyboardMarkup(DefaultKeyboard...)
+	msg.ReplyMarkup = keyboard
+	sent, err := bot.Send(msg)
+	if err != nil {
+		fmt.Println("Error sending start menu: ", err)
+	}
+	go help.AddToDelete1(sent.Chat.ID, sent.MessageID)
 }

@@ -110,9 +110,9 @@ func checkingOpenTickets() ([]int64, error){
 	}
 	defer db.Close()
 
-	query := (`SELECT id FROM tickets WHERE status = ?`)
+	query := (`SELECT id FROM tickets WHERE status = ? OR status = ?`)
 	
-	rows, err := db.Query(query, "Chat")
+	rows, err := db.Query(query, "Chat", "Claimed")
 	if err != nil {
 		return nil, fmt.Errorf("Error executing query while check opened tickets: %w", err)
 	}
@@ -866,7 +866,7 @@ func OutputInvoices() ([]*Invoice, error){
 	}
 	defer db.Close()
 
-	query := ("SELECT invoice_id, chat_id FROM bookkeeping")
+	query := ("SELECT * FROM bookkeeping")
 
 	var paymentlist []*Invoice
 
@@ -878,7 +878,7 @@ func OutputInvoices() ([]*Invoice, error){
 
 	for rows.Next(){
 		payment := &Invoice{}
-		err := rows.Scan(&payment.InvoiceID, &payment.ChatID) //
+		err := rows.Scan(&payment.InvoiceID, &payment.ChatID, &payment.LinkName, &payment.Amount, &payment.StringAmount, &payment.Asset, &payment.PaymentTime) //
 		if err != nil {
 			if err == sql.ErrNoRows{
 				fmt.Println("Payment not found while reads bookkeeping",err)
