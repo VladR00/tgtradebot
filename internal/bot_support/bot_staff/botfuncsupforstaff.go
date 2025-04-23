@@ -412,22 +412,73 @@ func ViewTicket(chatID int64, bot *tgbotapi.BotAPI, ticket database.Ticket, staf
 		fmt.Println("Error sending start menu: ", err)
 	}
 	go help.AddToDelete1(sent.Chat.ID, sent.MessageID)
-	SendAllMessages(ticket, bot)
+	go SendAllMessages(chatID, ticket, bot)
 }
 
-func SendAllMessages(ticket database.Ticket, bot *tgbotapi.BotAPI){
+func SendAllMessages(chatID int64, ticket database.Ticket, bot *tgbotapi.BotAPI){
 	messages, err := database.ReadAllMessagesByTicketID(ticket.TicketID)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
+	var sup bool
+	var previous bool = false
+	count := 0
+	var clock int64
+	var result int64
+	var resultout string
 	for _, message := range messages{
-		msg := tgbotapi.NewCopyMessage(ticket.SupChatID, message.ChatID, message.MessageID)
+		count++
+		if count == 1{
+			previous = false
+			sup = false
+			clock = message.Time
+			help.NewMessage1(chatID, bot, "🤓🤓🤓 User 🤓🤓🤓", true)
+		} else {		
+			if message.Support == 1 {
+				sup = true
+			} else {
+				sup = false
+			}
+		}
+
+		if sup != previous{
+			previous = sup
+			if sup{
+				result = message.Time-clock
+				resultout = "sec"
+				if result > 60{
+					result = result / 60
+					resultout = "min"
+					if result > 60{
+						result = result / 60
+						resultout = "hours"
+					}
+				}
+				help.NewMessage1(chatID, bot, fmt.Sprintf("😎😎😎 Support 😎😎😎; Time after last switch: %d %s", result, resultout), true)
+				clock = message.Time
+			} else {
+				result = message.Time-clock
+				resultout = "sec"
+				if result > 60{
+					result = result / 60
+					resultout = "min"
+					if result > 60{
+						result = result / 60
+						resultout = "hours"
+					}
+				}
+				help.NewMessage1(chatID, bot, fmt.Sprintf("🤓🤓🤓 User 🤓🤓🤓; Time after last switch: %d %s", result, resultout), true)
+				clock = message.Time
+			}
+		}
+		msg := tgbotapi.NewCopyMessage(chatID, message.ChatID, message.MessageID)
 		sent, err := bot.Send(msg)
 		if err != nil {
-			fmt.Println("Error sending: ", err)
+			fmt.Println("CopyMessage error: ", err)
+			continue
 		}
-		go help.AddToDelete1(ticket.SupChatID, sent.MessageID)
+		go help.AddToDelete1(chatID, sent.MessageID)
 	}
 }
 func CloseTicket(chatID int64, bot *tgbotapi.BotAPI, ticketid string){
